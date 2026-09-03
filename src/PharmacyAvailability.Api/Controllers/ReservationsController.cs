@@ -154,4 +154,24 @@ public class ReservationsController : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// PlatformAdmin administratively releases reserved stock (e.g. branch emergency or customer dispute).
+    /// </summary>
+    [HttpPost("{reservationId:guid}/release")]
+    [Authorize(Roles = "PlatformAdmin")]
+    public async Task<ActionResult<ReservationDto>> ReleaseReservation(
+        [FromRoute] Guid reservationId,
+        [FromBody] AdminReleaseReservationRequest request,
+        CancellationToken ct)
+    {
+        var adminUserId = GetCurrentUserId();
+        var result = await _reservationService.ReleaseReservationByAdminAsync(
+            reservationId,
+            adminUserId,
+            request.Reason,
+            ct);
+
+        return Ok(result);
+    }
 }

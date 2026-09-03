@@ -22,7 +22,10 @@ public record ReservationDto(
     DateTime ExpiresAt,
     DateTime? ConfirmedAt,
     DateTime? ReleasedAt,
-    DateTime? CancelledAt);
+    DateTime? CancelledAt,
+    DateTime? ExpiredAt);
+
+public record AdminReleaseReservationRequest(string Reason);
 
 public record GetReservationsQuery
 {

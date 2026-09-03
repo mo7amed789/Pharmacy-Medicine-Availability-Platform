@@ -40,81 +40,76 @@ public class ReservationService : IReservationService
         if (request.Quantity <= 0)
             throw new DomainValidationException("Reservation quantity must be greater than zero.");
 
-        // 1. Verify branch and pharmacy status
-        var branch = await _context.PharmacyBranches
-            .Include(b => b.Pharmacy)
-            .FirstOrDefaultAsync(b => b.Id == request.BranchId, ct);
+        // Explicit database transaction guarantees full rollback on any failure
+        using var transaction = await _context.Database.BeginTransactionAsync(ct);
 
-        if (branch == null)
-            throw new KeyNotFoundException($"Branch with ID '{request.BranchId}' was not found.");
+        try
+        {
+            // 1. Verify branch and pharmacy status
+            var branch = await _context.PharmacyBranches
+                .Include(b => b.Pharmacy)
+                .FirstOrDefaultAsync(b => b.Id == request.BranchId, ct);
 
-        if (!branch.IsActive)
-            throw new DomainValidationException($"Branch '{branch.Name}' is currently inactive.");
+            if (branch == null)
+                throw new KeyNotFoundException($"Branch with ID '{request.BranchId}' was not found.");
 
-        if (branch.Pharmacy == null)
-            throw new KeyNotFoundException("Parent pharmacy for this branch was not found.");
+            if (!branch.IsActive)
+                throw new DomainValidationException($"Branch '{branch.Name}' is currently inactive.");
 
-        if (branch.Pharmacy.Status != PharmacyStatus.Active)
-            throw new DomainValidationException($"Pharmacy '{branch.Pharmacy.Name}' is {branch.Pharmacy.Status} and cannot accept reservations.");
+            if (branch.Pharmacy == null)
+                throw new KeyNotFoundException("Parent pharmacy for this branch was not found.");
 
-        // 2. Verify medicine status
-        var medicine = await _context.Medicines
-            .FirstOrDefaultAsync(m => m.Id == request.MedicineId, ct);
+            if (branch.Pharmacy.Status != PharmacyStatus.Active)
+                throw new DomainValidationException($"Pharmacy '{branch.Pharmacy.Name}' is {branch.Pharmacy.Status} and cannot accept reservations.");
 
-        if (medicine == null)
-            throw new KeyNotFoundException($"Medicine with ID '{request.MedicineId}' was not found.");
+            // 2. Verify medicine status
+            var medicine = await _context.Medicines
+                .FirstOrDefaultAsync(m => m.Id == request.MedicineId, ct);
 
-        if (!medicine.IsActive)
-            throw new DomainValidationException($"Medicine '{medicine.BrandName}' is currently inactive.");
+            if (medicine == null)
+                throw new KeyNotFoundException($"Medicine with ID '{request.MedicineId}' was not found.");
 
-        // 3. Load branch inventory (tracked for atomic update)
-        var inventory = await _context.PharmacyInventories
-            .FirstOrDefaultAsync(pi => pi.BranchId == request.BranchId && pi.MedicineId == request.MedicineId, ct);
+            if (!medicine.IsActive)
+                throw new DomainValidationException($"Medicine '{medicine.BrandName}' is currently inactive.");
 
-        if (inventory == null)
-            throw new KeyNotFoundException($"No inventory found for medicine '{medicine.BrandName}' at branch '{branch.Name}'.");
+            // 3. Load branch inventory (tracked with RowVersion concurrency token)
+            var inventory = await _context.PharmacyInventories
+                .FirstOrDefaultAsync(pi => pi.BranchId == request.BranchId && pi.MedicineId == request.MedicineId, ct);
 
-        // 4. Reserve stock atomically on inventory aggregate
-        inventory.Reserve(
-            request.Quantity,
-            customerId,
-            "Customer reservation hold");
+            if (inventory == null)
+                throw new KeyNotFoundException($"No inventory found for medicine '{medicine.BrandName}' at branch '{branch.Name}'.");
 
-        // 5. Create reservation entity
-        var expiresAt = DateTime.UtcNow.AddMinutes(_options.HoldDurationMinutes);
-        var reservation = new Reservation(
-            customerId,
-            branch.PharmacyId,
-            branch.Id,
-            medicine.Id,
-            request.Quantity,
-            expiresAt);
+            // 4. Reserve stock atomically on inventory aggregate (invariants checked)
+            inventory.Reserve(
+                request.Quantity,
+                customerId,
+                "Customer reservation hold");
 
-        _context.Reservations.Add(reservation);
-        await _context.SaveChangesAsync(ct);
+            // 5. Create reservation entity
+            var expiresAt = DateTime.UtcNow.AddMinutes(_options.HoldDurationMinutes);
+            var reservation = new Reservation(
+                customerId,
+                branch.PharmacyId,
+                branch.Id,
+                medicine.Id,
+                request.Quantity,
+                expiresAt);
 
-        _logger.LogInformation(
-            "Reservation {ReservationId} created for customer {CustomerId} at branch {BranchId} (Qty: {Qty})",
-            reservation.Id, customerId, branch.Id, request.Quantity);
+            _context.Reservations.Add(reservation);
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
-        return new ReservationDto(
-            reservation.Id,
-            reservation.CustomerId,
-            reservation.PharmacyId,
-            branch.Pharmacy.Name,
-            reservation.BranchId,
-            branch.Name,
-            branch.Address,
-            reservation.MedicineId,
-            medicine.BrandName,
-            medicine.GenericName,
-            reservation.Quantity,
-            reservation.Status.ToString(),
-            reservation.CreatedAt,
-            reservation.ExpiresAt,
-            reservation.ConfirmedAt,
-            reservation.ReleasedAt,
-            reservation.CancelledAt);
+            _logger.LogInformation(
+                "Reservation {ReservationId} created for customer {CustomerId} at branch {BranchId} (Qty: {Qty})",
+                reservation.Id, customerId, branch.Id, request.Quantity);
+
+            return MapToDto(reservation, branch.Pharmacy.Name, branch.Name, branch.Address, medicine.BrandName, medicine.GenericName);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<ReservationDto> CancelReservationAsync(
@@ -137,22 +132,48 @@ public class ReservationService : IReservationService
         if (inventory == null)
             throw new KeyNotFoundException($"Inventory item for branch '{reservation.BranchId}' was not found.");
 
+        // Check if reservation is overdue: inline expiration if past ExpiresAt
+        if (reservation.Status == ReservationStatus.Active && reservation.ExpiresAt <= DateTime.UtcNow)
+        {
+            using var expireTx = await _context.Database.BeginTransactionAsync(ct);
+            reservation.Expire();
+            inventory.ReleaseReservation(
+                reservation.Quantity,
+                customerId,
+                $"Reservation {reservation.Id} expired automatically at cancellation attempt",
+                InventoryAdjustmentReason.ReservationExpired);
+            await _context.SaveChangesAsync(ct);
+            await expireTx.CommitAsync(ct);
+
+            throw new ResourceConflictException($"Cannot cancel reservation '{reservation.Id}' because it already expired at {reservation.ExpiresAt:u}.");
+        }
+
         // Transitions to Cancelled or throws ResourceConflictException if not Active
-        reservation.Cancel();
+        using var transaction = await _context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            reservation.Cancel();
 
-        inventory.ReleaseReservation(
-            reservation.Quantity,
-            customerId,
-            $"Reservation {reservation.Id} cancelled by customer",
-            InventoryAdjustmentReason.ReservationRelease);
+            inventory.ReleaseReservation(
+                reservation.Quantity,
+                customerId,
+                $"Reservation {reservation.Id} cancelled by customer",
+                InventoryAdjustmentReason.ReservationRelease);
 
-        await _context.SaveChangesAsync(ct);
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
-        _logger.LogInformation(
-            "Reservation {ReservationId} cancelled by customer {CustomerId}",
-            reservation.Id, customerId);
+            _logger.LogInformation(
+                "Reservation {ReservationId} cancelled by customer {CustomerId}",
+                reservation.Id, customerId);
 
-        return MapToDto(reservation);
+            return MapToDto(reservation);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<ReservationDto> ConfirmReservationAsync(
@@ -180,21 +201,112 @@ public class ReservationService : IReservationService
         if (inventory == null)
             throw new KeyNotFoundException($"Inventory item for branch '{reservation.BranchId}' was not found.");
 
+        // Check if reservation is overdue: inline expiration if past ExpiresAt
+        if (reservation.Status == ReservationStatus.Active && reservation.ExpiresAt <= DateTime.UtcNow)
+        {
+            using var expireTx = await _context.Database.BeginTransactionAsync(ct);
+            reservation.Expire();
+            inventory.ReleaseReservation(
+                reservation.Quantity,
+                staffUserId,
+                $"Reservation {reservation.Id} expired automatically at confirmation attempt",
+                InventoryAdjustmentReason.ReservationExpired);
+            await _context.SaveChangesAsync(ct);
+            await expireTx.CommitAsync(ct);
+
+            throw new ResourceConflictException($"Cannot confirm reservation '{reservation.Id}' because it expired at {reservation.ExpiresAt:u}.");
+        }
+
         // Transitions to Confirmed or throws ResourceConflictException if not Active
-        reservation.Confirm();
+        using var transaction = await _context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            reservation.Confirm();
 
-        inventory.ConfirmReservation(
-            reservation.Quantity,
-            staffUserId,
-            $"Reservation {reservation.Id} confirmed by staff");
+            inventory.ConfirmReservation(
+                reservation.Quantity,
+                staffUserId,
+                $"Reservation {reservation.Id} confirmed by staff");
 
-        await _context.SaveChangesAsync(ct);
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
-        _logger.LogInformation(
-            "Reservation {ReservationId} confirmed by staff {StaffUserId}",
-            reservation.Id, staffUserId);
+            _logger.LogInformation(
+                "Reservation {ReservationId} confirmed by staff {StaffUserId}",
+                reservation.Id, staffUserId);
 
-        return MapToDto(reservation);
+            return MapToDto(reservation);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task<ReservationDto> ReleaseReservationByAdminAsync(
+        Guid reservationId,
+        Guid adminUserId,
+        string reason,
+        CancellationToken ct = default)
+    {
+        var reservation = await _context.Reservations
+            .Include(r => r.Pharmacy)
+            .Include(r => r.Branch)
+            .Include(r => r.Medicine)
+            .FirstOrDefaultAsync(r => r.Id == reservationId, ct);
+
+        if (reservation == null)
+            throw new KeyNotFoundException($"Reservation with ID '{reservationId}' was not found.");
+
+        var inventory = await _context.PharmacyInventories
+            .FirstOrDefaultAsync(pi => pi.BranchId == reservation.BranchId && pi.MedicineId == reservation.MedicineId, ct);
+
+        if (inventory == null)
+            throw new KeyNotFoundException($"Inventory item for branch '{reservation.BranchId}' was not found.");
+
+        // Check if reservation is overdue: inline expiration if past ExpiresAt
+        if (reservation.Status == ReservationStatus.Active && reservation.ExpiresAt <= DateTime.UtcNow)
+        {
+            using var expireTx = await _context.Database.BeginTransactionAsync(ct);
+            reservation.Expire();
+            inventory.ReleaseReservation(
+                reservation.Quantity,
+                adminUserId,
+                $"Reservation {reservation.Id} expired automatically at admin release attempt",
+                InventoryAdjustmentReason.ReservationExpired);
+            await _context.SaveChangesAsync(ct);
+            await expireTx.CommitAsync(ct);
+
+            throw new ResourceConflictException($"Cannot release reservation '{reservation.Id}' because it already expired at {reservation.ExpiresAt:u}.");
+        }
+
+        using var transaction = await _context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            // Transition to Released
+            reservation.Release();
+
+            inventory.ReleaseReservation(
+                reservation.Quantity,
+                adminUserId,
+                $"Administrative release by platform admin: {reason}",
+                InventoryAdjustmentReason.ManualAdjustment);
+
+            await _context.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            _logger.LogInformation(
+                "Reservation {ReservationId} administratively released by admin {AdminUserId}: {Reason}",
+                reservation.Id, adminUserId, reason);
+
+            return MapToDto(reservation);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<PagedResult<ReservationDto>> GetReservationsAsync(
@@ -319,6 +431,8 @@ public class ReservationService : IReservationService
         {
             try
             {
+                using var tx = await _context.Database.BeginTransactionAsync(ct);
+
                 var inventory = await _context.PharmacyInventories
                     .FirstOrDefaultAsync(pi => pi.BranchId == r.BranchId && pi.MedicineId == r.MedicineId, ct);
 
@@ -333,12 +447,20 @@ public class ReservationService : IReservationService
                         InventoryAdjustmentReason.ReservationExpired);
 
                     await _context.SaveChangesAsync(ct);
+                    await tx.CommitAsync(ct);
                     expiredCount++;
                 }
             }
-            catch (Exception ex) when (ex is DbUpdateConcurrencyException or ResourceConflictException)
+            catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Reservation {ReservationId} had concurrent modification during expiration sweep.", r.Id);
+                // Failure isolation: detach dirty state so other reservations in batch proceed unaffected
+                _context.Entry(r).State = EntityState.Unchanged;
+                var dirtyInv = _context.ChangeTracker.Entries<PharmacyInventory>()
+                    .FirstOrDefault(e => e.Entity.BranchId == r.BranchId && e.Entity.MedicineId == r.MedicineId);
+                if (dirtyInv != null)
+                    dirtyInv.State = EntityState.Unchanged;
+
+                _logger.LogWarning(ex, "Reservation {ReservationId} had error/concurrency conflict during expiration sweep. Skipped.", r.Id);
             }
         }
 
@@ -351,22 +473,38 @@ public class ReservationService : IReservationService
     }
 
     private static ReservationDto MapToDto(Reservation r) =>
+        MapToDto(
+            r,
+            r.Pharmacy?.Name ?? string.Empty,
+            r.Branch?.Name ?? string.Empty,
+            r.Branch?.Address ?? string.Empty,
+            r.Medicine?.BrandName ?? string.Empty,
+            r.Medicine?.GenericName ?? string.Empty);
+
+    private static ReservationDto MapToDto(
+        Reservation r,
+        string pharmacyName,
+        string branchName,
+        string branchAddress,
+        string medicineBrandName,
+        string medicineGenericName) =>
         new(
             r.Id,
             r.CustomerId,
             r.PharmacyId,
-            r.Pharmacy?.Name ?? string.Empty,
+            pharmacyName,
             r.BranchId,
-            r.Branch?.Name ?? string.Empty,
-            r.Branch?.Address ?? string.Empty,
+            branchName,
+            branchAddress,
             r.MedicineId,
-            r.Medicine?.BrandName ?? string.Empty,
-            r.Medicine?.GenericName ?? string.Empty,
+            medicineBrandName,
+            medicineGenericName,
             r.Quantity,
             r.Status.ToString(),
             r.CreatedAt,
             r.ExpiresAt,
             r.ConfirmedAt,
             r.ReleasedAt,
-            r.CancelledAt);
+            r.CancelledAt,
+            r.ExpiredAt);
 }

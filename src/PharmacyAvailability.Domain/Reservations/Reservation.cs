@@ -19,6 +19,7 @@ public class Reservation : BaseEntity
     public DateTime? ConfirmedAt { get; private set; }
     public DateTime? ReleasedAt { get; private set; }
     public DateTime? CancelledAt { get; private set; }
+    public DateTime? ExpiredAt { get; private set; }
     public byte[] RowVersion { get; private set; } = [];
 
     // Navigations
@@ -88,7 +89,7 @@ public class Reservation : BaseEntity
             throw new ResourceConflictException($"Cannot expire reservation '{Id}' with status '{Status}'. Only active reservations can be expired.");
 
         Status = ReservationStatus.Expired;
-        ReleasedAt = DateTime.UtcNow;
+        ExpiredAt = DateTime.UtcNow;
     }
 
     public void Release()

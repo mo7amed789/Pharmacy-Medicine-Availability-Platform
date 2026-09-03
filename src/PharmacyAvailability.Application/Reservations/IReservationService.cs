@@ -39,4 +39,10 @@ public interface IReservationService
 
     Task<int> ExpireOverdueReservationsAsync(
         CancellationToken ct = default);
+
+    Task<ReservationDto> ReleaseReservationByAdminAsync(
+        Guid reservationId,
+        Guid adminUserId,
+        string reason,
+        CancellationToken ct = default);
 }

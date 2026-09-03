@@ -41,6 +41,9 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         builder.Property(r => r.CancelledAt)
             .HasColumnType("datetime2");
 
+        builder.Property(r => r.ExpiredAt)
+            .HasColumnType("datetime2");
+
         builder.Property(r => r.RowVersion)
             .IsRowVersion();
 

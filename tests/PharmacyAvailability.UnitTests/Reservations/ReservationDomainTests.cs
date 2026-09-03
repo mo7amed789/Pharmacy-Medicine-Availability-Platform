@@ -90,7 +90,10 @@ public class ReservationDomainTests
         reservation.Expire();
 
         Assert.Equal(ReservationStatus.Expired, reservation.Status);
-        Assert.NotNull(reservation.ReleasedAt);
+        Assert.NotNull(reservation.ExpiredAt);
+        Assert.Null(reservation.ReleasedAt);
+        Assert.Null(reservation.CancelledAt);
+        Assert.Null(reservation.ConfirmedAt);
     }
 
     [Fact]
@@ -102,6 +105,9 @@ public class ReservationDomainTests
 
         Assert.Equal(ReservationStatus.Released, reservation.Status);
         Assert.NotNull(reservation.ReleasedAt);
+        Assert.Null(reservation.ExpiredAt);
+        Assert.Null(reservation.CancelledAt);
+        Assert.Null(reservation.ConfirmedAt);
     }
 
     [Fact]

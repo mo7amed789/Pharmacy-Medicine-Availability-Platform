@@ -402,7 +402,7 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
         var verifiedInv = await verifyDb.PharmacyInventories.FirstOrDefaultAsync(pi => pi.BranchId == branch.Id && pi.MedicineId == medicine.Id);
 
         Assert.Equal(ReservationStatus.Expired, verifiedRes!.Status);
-        Assert.NotNull(verifiedRes.ReleasedAt);
+        Assert.NotNull(verifiedRes.ExpiredAt);
         Assert.Equal(20, verifiedInv!.AvailableQuantity);
         Assert.Equal(0, verifiedInv.ReservedQuantity);
 
@@ -493,5 +493,257 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
         var result = await listResp.Content.ReadFromJsonAsync<PagedResult<ReservationDto>>();
         Assert.NotNull(result);
         Assert.All(result.Items, r => Assert.Equal(custA.Id, r.CustomerId));
+    }
+
+    [Fact]
+    public async Task ConfirmReservation_AfterExpiration_Returns409AndTransitionsToExpired()
+    {
+        // Arrange: 20 available, customer reserves 5 -> 15 available, 5 reserved
+        var (pharmacy, branch, medicine, _) = await SeedInventoryAsync(availableQuantity: 20);
+        var (custToken, _) = CreateTokenAndUser(UserRole.Customer);
+        var (staffToken, _) = CreateTokenAndUser(UserRole.PharmacyStaff, pharmacy.Id);
+
+        var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/reservations")
+        {
+            Content = JsonContent.Create(new CreateReservationRequest(branch.Id, medicine.Id, 5))
+        };
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var createResp = await _client.SendAsync(createReq);
+        var created = await createResp.Content.ReadFromJsonAsync<ReservationDto>();
+
+        // Simulate expiration: set CreatedAt to 3 hours ago and ExpiresAt to 1 hour ago
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE Reservations SET CreatedAt = {0}, ExpiresAt = {1} WHERE Id = {2}",
+                DateTime.UtcNow.AddHours(-3), DateTime.UtcNow.AddHours(-1), created!.Id);
+        }
+
+        // Act: Staff attempts to confirm the expired reservation
+        var confirmReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{created!.Id}/confirm");
+        confirmReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", staffToken);
+        var confirmResp = await _client.SendAsync(confirmReq);
+
+        // Assert: 409 Conflict
+        Assert.Equal(HttpStatusCode.Conflict, confirmResp.StatusCode);
+
+        // Verify that reservation transitioned to Expired and stock was restored to 20 available
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var res = await db.Reservations.FindAsync(created.Id);
+            var inv = await db.PharmacyInventories.FirstOrDefaultAsync(pi => pi.BranchId == branch.Id && pi.MedicineId == medicine.Id);
+
+            Assert.Equal(ReservationStatus.Expired, res!.Status);
+            Assert.NotNull(res.ExpiredAt);
+            Assert.Equal(20, inv!.AvailableQuantity);
+            Assert.Equal(0, inv.ReservedQuantity);
+        }
+    }
+
+    [Fact]
+    public async Task CancelReservation_AfterExpiration_Returns409AndTransitionsToExpired()
+    {
+        // Arrange: 20 available, customer reserves 5 -> 15 available, 5 reserved
+        var (_, branch, medicine, _) = await SeedInventoryAsync(availableQuantity: 20);
+        var (custToken, _) = CreateTokenAndUser(UserRole.Customer);
+
+        var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/reservations")
+        {
+            Content = JsonContent.Create(new CreateReservationRequest(branch.Id, medicine.Id, 5))
+        };
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var createResp = await _client.SendAsync(createReq);
+        var created = await createResp.Content.ReadFromJsonAsync<ReservationDto>();
+
+        // Simulate expiration
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE Reservations SET CreatedAt = {0}, ExpiresAt = {1} WHERE Id = {2}",
+                DateTime.UtcNow.AddHours(-3), DateTime.UtcNow.AddHours(-1), created!.Id);
+        }
+
+        // Act: Customer attempts to cancel the expired reservation
+        var cancelReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{created!.Id}/cancel");
+        cancelReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var cancelResp = await _client.SendAsync(cancelReq);
+
+        // Assert: 409 Conflict
+        Assert.Equal(HttpStatusCode.Conflict, cancelResp.StatusCode);
+
+        // Verify that reservation transitioned to Expired and stock was restored to 20 available
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var res = await db.Reservations.FindAsync(created.Id);
+            var inv = await db.PharmacyInventories.FirstOrDefaultAsync(pi => pi.BranchId == branch.Id && pi.MedicineId == medicine.Id);
+
+            Assert.Equal(ReservationStatus.Expired, res!.Status);
+            Assert.NotNull(res.ExpiredAt);
+            Assert.Equal(20, inv!.AvailableQuantity);
+            Assert.Equal(0, inv.ReservedQuantity);
+        }
+    }
+
+    [Fact]
+    public async Task ConcurrentCancellationAndConfirmation_OnlyOneWins()
+    {
+        // Arrange: 20 available, customer reserves 5 -> 15 available, 5 reserved
+        var (pharmacy, branch, medicine, _) = await SeedInventoryAsync(availableQuantity: 20);
+        var (custToken, _) = CreateTokenAndUser(UserRole.Customer);
+        var (staffToken, _) = CreateTokenAndUser(UserRole.PharmacyStaff, pharmacy.Id);
+
+        var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/reservations")
+        {
+            Content = JsonContent.Create(new CreateReservationRequest(branch.Id, medicine.Id, 5))
+        };
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var createResp = await _client.SendAsync(createReq);
+        var created = await createResp.Content.ReadFromJsonAsync<ReservationDto>();
+
+        // Act: Run cancellation and confirmation concurrently
+        var client1 = _factory.CreateClient();
+        var client2 = _factory.CreateClient();
+
+        var cancelTask = Task.Run(async () =>
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{created!.Id}/cancel");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+            return await client1.SendAsync(req);
+        });
+
+        var confirmTask = Task.Run(async () =>
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{created!.Id}/confirm");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", staffToken);
+            return await client2.SendAsync(req);
+        });
+
+        var responses = await Task.WhenAll(cancelTask, confirmTask);
+
+        // Assert: Exactly one 200 OK and one 409 Conflict
+        var okCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
+        var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+
+        Assert.Equal(1, okCount);
+        Assert.Equal(1, conflictCount);
+
+        // Verify inventory consistency: either 20/0 (if cancel won) or 15/0 (if confirm won), never corrupted
+        using var verifyScope = _factory.Services.CreateScope();
+        var db = verifyScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+        var finalRes = await db.Reservations.FindAsync(created!.Id);
+        var finalInv = await db.PharmacyInventories.FirstOrDefaultAsync(pi => pi.BranchId == branch.Id && pi.MedicineId == medicine.Id);
+
+        Assert.True(finalRes!.Status is ReservationStatus.Cancelled or ReservationStatus.Confirmed);
+        Assert.Equal(0, finalInv!.ReservedQuantity);
+        Assert.True(finalInv.AvailableQuantity is 20 or 15);
+    }
+
+    [Fact]
+    public async Task ConcurrentCancellationAndExpiration_OnlyOneWins_NoDoubleRelease()
+    {
+        // Arrange: 20 available, customer reserves 5 -> 15 available, 5 reserved
+        var (_, branch, medicine, _) = await SeedInventoryAsync(availableQuantity: 20);
+        var (custToken, _) = CreateTokenAndUser(UserRole.Customer);
+
+        var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/reservations")
+        {
+            Content = JsonContent.Create(new CreateReservationRequest(branch.Id, medicine.Id, 5))
+        };
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var createResp = await _client.SendAsync(createReq);
+        var created = await createResp.Content.ReadFromJsonAsync<ReservationDto>();
+
+        // Set to overdue so sweep will consider it
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE Reservations SET CreatedAt = {0}, ExpiresAt = {1} WHERE Id = {2}",
+                DateTime.UtcNow.AddHours(-3), DateTime.UtcNow.AddHours(-1), created!.Id);
+        }
+
+        // Act: Run customer cancel HTTP request and expiration sweep service concurrently
+        var cancelTask = Task.Run(async () =>
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{created!.Id}/cancel");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+            return await _client.SendAsync(req);
+        });
+
+        var sweepTask = Task.Run(async () =>
+        {
+            using var sweepScope = _factory.Services.CreateScope();
+            var service = sweepScope.ServiceProvider.GetRequiredService<IReservationService>();
+            return await service.ExpireOverdueReservationsAsync();
+        });
+
+        await Task.WhenAll(cancelTask, sweepTask);
+
+        // Verify: Exactly 20 available, 0 reserved! NO double release (which would yield 25)!
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+        var finalRes = await verifyDb.Reservations.FindAsync(created!.Id);
+        var finalInv = await verifyDb.PharmacyInventories.FirstOrDefaultAsync(pi => pi.BranchId == branch.Id && pi.MedicineId == medicine.Id);
+
+        Assert.True(finalRes!.Status is ReservationStatus.Cancelled or ReservationStatus.Expired);
+        Assert.Equal(20, finalInv!.AvailableQuantity); // Absolutely must be 20, never 25!
+        Assert.Equal(0, finalInv.ReservedQuantity);
+    }
+
+    [Fact]
+    public async Task AdminReleaseReservation_PlatformAdmin_RestoresStockAndSetsReleasedAt()
+    {
+        // Arrange: 20 available, customer reserves 5 -> 15 available, 5 reserved
+        var (_, branch, medicine, _) = await SeedInventoryAsync(availableQuantity: 20);
+        var (custToken, _) = CreateTokenAndUser(UserRole.Customer);
+        var (adminToken, _) = CreateTokenAndUser(UserRole.PlatformAdmin);
+
+        var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/reservations")
+        {
+            Content = JsonContent.Create(new CreateReservationRequest(branch.Id, medicine.Id, 5))
+        };
+        createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var createResp = await _client.SendAsync(createReq);
+        var created = await createResp.Content.ReadFromJsonAsync<ReservationDto>();
+
+        // Act: PlatformAdmin administratively releases reservation
+        var releaseReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{created!.Id}/release")
+        {
+            Content = JsonContent.Create(new AdminReleaseReservationRequest("Emergency branch closure"))
+        };
+        releaseReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var releaseResp = await _client.SendAsync(releaseReq);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, releaseResp.StatusCode);
+        var released = await releaseResp.Content.ReadFromJsonAsync<ReservationDto>();
+        Assert.Equal("Released", released!.Status);
+        Assert.NotNull(released.ReleasedAt);
+
+        // Verify inventory restored: 20 available, 0 reserved
+        using var verifyScope = _factory.Services.CreateScope();
+        var db = verifyScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+        var finalInv = await db.PharmacyInventories.FirstOrDefaultAsync(pi => pi.BranchId == branch.Id && pi.MedicineId == medicine.Id);
+
+        Assert.Equal(20, finalInv!.AvailableQuantity);
+        Assert.Equal(0, finalInv.ReservedQuantity);
+    }
+
+    [Fact]
+    public async Task AdminReleaseReservation_Customer_Returns403Forbidden()
+    {
+        var (custToken, _) = CreateTokenAndUser(UserRole.Customer);
+        var releaseReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/reservations/{Guid.NewGuid()}/release")
+        {
+            Content = JsonContent.Create(new AdminReleaseReservationRequest("Customer attempt"))
+        };
+        releaseReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", custToken);
+        var releaseResp = await _client.SendAsync(releaseReq);
+
+        Assert.Equal(HttpStatusCode.Forbidden, releaseResp.StatusCode);
     }
 }
