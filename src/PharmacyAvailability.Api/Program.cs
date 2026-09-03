@@ -9,10 +9,12 @@ using PharmacyAvailability.Api.Authorization;
 using PharmacyAvailability.Api.Middleware;
 using PharmacyAvailability.Application.Auth;
 using PharmacyAvailability.Application.Common.Interfaces;
+using PharmacyAvailability.Application.Availability;
 using PharmacyAvailability.Application.Catalog;
 using PharmacyAvailability.Application.Inventory;
 using PharmacyAvailability.Application.Pharmacies;
 using PharmacyAvailability.Domain.Identity;
+using PharmacyAvailability.Infrastructure.Availability;
 using PharmacyAvailability.Infrastructure.Catalog;
 using PharmacyAvailability.Infrastructure.Inventory;
 using PharmacyAvailability.Infrastructure.Pharmacies;
@@ -45,6 +47,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
 
 // 4. JWT Authentication
 var jwtSecret = builder.Configuration["Jwt:Secret"];
