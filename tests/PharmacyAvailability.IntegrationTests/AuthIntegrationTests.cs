@@ -151,6 +151,30 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    public async Task RefreshToken_DeactivatedAccount_Returns401Unauthorized()
+    {
+        // Arrange: Register user, obtain refresh token, then deactivate the account
+        var email = $"deact_refresh_{Guid.NewGuid():N}@test.com";
+        var password = "SecurePassword123!";
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Deact User", null));
+        var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var user = await db.Users.FindAsync(auth!.User.Id);
+            user!.Deactivate();
+            await db.SaveChangesAsync();
+        }
+
+        // Act: Attempt to refresh using previously issued token
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest(auth!.RefreshToken));
+
+        // Assert: Deactivated user refresh MUST be rejected with 401 Unauthorized
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task RefreshToken_Success_RotatesTokenAndIssuesNewPair()
     {
         // Arrange

@@ -44,6 +44,11 @@ if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
     throw new InvalidOperationException("Fatal Security Error: 'Jwt:Secret' configuration is missing or too short.");
 }
 
+if (!builder.Environment.IsDevelopment() && jwtSecret.Contains("Development_Only", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException("Fatal Security Error: A production-grade 'Jwt:Secret' must be provided via environment variables in non-development environments.");
+}
+
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
 builder.Services.AddAuthentication(options =>

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
@@ -183,10 +184,11 @@ public class HttpPipelineTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task ProblemDetails_UnhandledError_InProduction_HidesInternalSecrets()
     {
-        // Arrange: Create a client running with Production environment
+        // Arrange: Create a client running with Production environment and secure production key
         var prodFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Production");
+            builder.UseSetting("Jwt:Secret", "ProductionGradeSecretKeyWithMoreThan64CharactersForEnterpriseSecurity1234567890!");
         });
         var client = prodFactory.CreateClient();
 

@@ -179,7 +179,15 @@ public class AuthService : IAuthService
 
         var (accessToken, accessExpiry) = _tokenService.GenerateAccessToken(user);
 
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Concurrency conflict during refresh token rotation for user {UserId}.", user.Id);
+            throw new UnauthorizedAccessException("The refresh token has already been rotated by a concurrent request.");
+        }
 
         _logger.LogInformation("Refresh token rotated successfully for user {UserId}.", user.Id);
 

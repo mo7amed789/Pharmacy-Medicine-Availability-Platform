@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PharmacyAvailability.Application.Common.Interfaces;
 using PharmacyAvailability.Domain.Identity;
@@ -51,7 +53,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var customer = new User("cust@test.com", "hash", "Customer", UserRole.Customer);
         var token = CreateTokenForUser(customer);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pharmacies/{pharmacyA.Id}/access-check");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyA.Id}/access-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
@@ -69,7 +71,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var staffA = new User("staffA@test.com", "hash", "Staff A", UserRole.PharmacyStaff, "+2010", pharmacyA.Id);
         var token = CreateTokenForUser(staffA);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pharmacies/{pharmacyA.Id}/access-check");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyA.Id}/access-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
@@ -87,7 +89,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var staffA = new User("staffA@test.com", "hash", "Staff A", UserRole.PharmacyStaff, "+2010", pharmacyA.Id);
         var token = CreateTokenForUser(staffA);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pharmacies/{pharmacyB.Id}/access-check");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyB.Id}/access-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
@@ -105,7 +107,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var adminA = new User("adminA@test.com", "hash", "Admin A", UserRole.PharmacyAdmin, "+2010", pharmacyA.Id);
         var token = CreateTokenForUser(adminA);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pharmacies/{pharmacyB.Id}/access-check");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyB.Id}/access-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
@@ -123,11 +125,11 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var superAdmin = new User("super@platform.com", "hash", "Super Admin", UserRole.PlatformAdmin);
         var token = CreateTokenForUser(superAdmin);
 
-        var requestA = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pharmacies/{pharmacyA.Id}/access-check");
+        var requestA = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyA.Id}/access-check");
         requestA.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var responseA = await _client.SendAsync(requestA);
 
-        var requestB = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pharmacies/{pharmacyB.Id}/access-check");
+        var requestB = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyB.Id}/access-check");
         requestB.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var responseB = await _client.SendAsync(requestB);
 
@@ -144,7 +146,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var staffA = new User("staffA@test.com", "hash", "Staff A", UserRole.PharmacyStaff, "+2010", pharmacyA.Id);
         var token = CreateTokenForUser(staffA);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/platform-check");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/test/admin/platform-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
@@ -161,7 +163,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         var superAdmin = new User("super@platform.com", "hash", "Super Admin", UserRole.PlatformAdmin);
         var token = CreateTokenForUser(superAdmin);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/platform-check");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/test/admin/platform-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
@@ -175,9 +177,50 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
     public async Task UnauthenticatedUser_AccessingProtectedEndpoint_Returns401Unauthorized()
     {
         // Act
-        var response = await _client.GetAsync("/api/v1/admin/platform-check");
+        var response = await _client.GetAsync("/api/test/admin/platform-check");
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TestEndpoints_InProduction_Returns404NotFound()
+    {
+        // Arrange
+        var prodFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting("Jwt:Secret", "ProductionGradeSecretKeyWithMoreThan64CharactersForEnterpriseSecurity1234567890!");
+        });
+        var prodClient = prodFactory.CreateClient();
+
+        // Act & Assert: In production, PharmacyAccessTestController endpoints are strictly blocked with 404 even if valid token is provided
+        using var scope = prodFactory.Services.CreateScope();
+        var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+        var (token, _) = tokenService.GenerateAccessToken(new User("admin@test.com", "hash", "Admin", UserRole.PlatformAdmin));
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{Guid.NewGuid()}/access-check");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await prodClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var adminRequest = new HttpRequestMessage(HttpMethod.Get, "/api/test/admin/platform-check");
+        adminRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var adminResponse = await prodClient.SendAsync(adminRequest);
+        Assert.Equal(HttpStatusCode.NotFound, adminResponse.StatusCode);
+    }
+
+    [Fact]
+    public void ProductionStartup_WithDevelopmentSecret_FailsFastWithFatalSecurityError()
+    {
+        // Arrange: Attempting to start in Production with the development placeholder key
+        var prodFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+        });
+
+        // Act & Assert: Host must immediately crash on startup
+        var ex = Assert.Throws<InvalidOperationException>(() => prodFactory.CreateClient());
+        Assert.Contains("Fatal Security Error", ex.Message);
     }
 }
