@@ -27,12 +27,13 @@ public class PrecisionAndUtcTests : IClassFixture<DatabaseFixture>
 
         var med = new Medicine($"Med_{Guid.NewGuid():N}", "Gen", "Act", "10mg", "Tab", cat.Id, man.Id);
         var pharm = new Pharmacy($"Pharm_{Guid.NewGuid():N}", $"LIC_{Guid.NewGuid():N}", "Addr", "City", new Coordinates(30.0, 31.0), "+20100");
+        var branch = pharm.AddBranch("Branch", "Addr", "City", new Coordinates(30.0, 31.0), "+20100");
         context.Medicines.Add(med);
         context.Pharmacies.Add(pharm);
         await context.SaveChangesAsync();
 
         var exactPrice = 149.99m;
-        var inventory = new PharmacyInventory(pharm.Id, med.Id, 10, exactPrice);
+        var inventory = new PharmacyInventory(pharm.Id, branch.Id, med.Id, 10, exactPrice);
         context.PharmacyInventories.Add(inventory);
         await context.SaveChangesAsync();
 

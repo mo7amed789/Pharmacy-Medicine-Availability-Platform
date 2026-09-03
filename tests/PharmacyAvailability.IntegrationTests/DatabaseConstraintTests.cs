@@ -17,7 +17,7 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
         _fixture = fixture;
     }
 
-    private async Task<(Pharmacy pharmacy, Medicine medicine, User user)> CreateBaseEntitiesAsync()
+    private async Task<(Pharmacy pharmacy, PharmacyBranch branch, Medicine medicine, User user)> CreateBaseEntitiesAsync()
     {
         using var context = _fixture.CreateContext();
 
@@ -44,6 +44,12 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
             "Cairo",
             new Coordinates(30.0444, 31.2357),
             "+201000000001");
+        var branch = pharmacy.AddBranch(
+            "Main Branch",
+            "10 Nile St",
+            "Cairo",
+            new Coordinates(30.0444, 31.2357),
+            "+201000000001");
         context.Pharmacies.Add(pharmacy);
 
         var user = new User(
@@ -54,23 +60,23 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
         context.Users.Add(user);
 
         await context.SaveChangesAsync();
-        return (pharmacy, medicine, user);
+        return (pharmacy, branch, medicine, user);
     }
 
     [Fact]
     public async Task DatabaseConstraint_NegativeInventoryQuantity_RejectedBySqlServer()
     {
-        var (pharmacy, medicine, _) = await CreateBaseEntitiesAsync();
+        var (pharmacy, branch, medicine, _) = await CreateBaseEntitiesAsync();
         using var context = _fixture.CreateContext();
 
         // Attempt raw SQL insert with negative quantity to bypass domain logic and test SQL Server check constraint
         var inventoryId = Guid.NewGuid();
         var sql = @"
-            INSERT INTO PharmacyInventories (Id, PharmacyId, MedicineId, AvailableQuantity, ReservedQuantity, Price, Currency, Source, UpdatedAt, CreatedAt)
-            VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, SYSUTCDATETIME(), SYSUTCDATETIME())";
+            INSERT INTO PharmacyInventories (Id, PharmacyId, BranchId, MedicineId, AvailableQuantity, ReservedQuantity, Price, Currency, Source, UpdatedAt, CreatedAt)
+            VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, SYSUTCDATETIME(), SYSUTCDATETIME())";
 
         var ex = await Assert.ThrowsAsync<SqlException>(() =>
-            context.Database.ExecuteSqlRawAsync(sql, inventoryId, pharmacy.Id, medicine.Id, -5, 0, 50.00m, "EGP", 1));
+            context.Database.ExecuteSqlRawAsync(sql, inventoryId, pharmacy.Id, branch.Id, medicine.Id, -5, 0, 50.00m, "EGP", 1));
 
         Assert.Contains("CK_PharmacyInventories_AvailableQuantity", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -78,16 +84,16 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
     [Fact]
     public async Task DatabaseConstraint_NegativeInventoryPrice_RejectedBySqlServer()
     {
-        var (pharmacy, medicine, _) = await CreateBaseEntitiesAsync();
+        var (pharmacy, branch, medicine, _) = await CreateBaseEntitiesAsync();
         using var context = _fixture.CreateContext();
 
         var inventoryId = Guid.NewGuid();
         var sql = @"
-            INSERT INTO PharmacyInventories (Id, PharmacyId, MedicineId, AvailableQuantity, ReservedQuantity, Price, Currency, Source, UpdatedAt, CreatedAt)
-            VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, SYSUTCDATETIME(), SYSUTCDATETIME())";
+            INSERT INTO PharmacyInventories (Id, PharmacyId, BranchId, MedicineId, AvailableQuantity, ReservedQuantity, Price, Currency, Source, UpdatedAt, CreatedAt)
+            VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, SYSUTCDATETIME(), SYSUTCDATETIME())";
 
         var ex = await Assert.ThrowsAsync<SqlException>(() =>
-            context.Database.ExecuteSqlRawAsync(sql, inventoryId, pharmacy.Id, medicine.Id, 10, 0, -25.50m, "EGP", 1));
+            context.Database.ExecuteSqlRawAsync(sql, inventoryId, pharmacy.Id, branch.Id, medicine.Id, 10, 0, -10.00m, "EGP", 1));
 
         Assert.Contains("CK_PharmacyInventories_Price", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -142,24 +148,24 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
     [Fact]
     public async Task DatabaseConstraint_DuplicatePharmacyMedicineInventory_RejectedBySqlServer()
     {
-        var (pharmacy, medicine, _) = await CreateBaseEntitiesAsync();
+        var (pharmacy, branch, medicine, _) = await CreateBaseEntitiesAsync();
         using var context = _fixture.CreateContext();
 
-        var inv1 = new PharmacyInventory(pharmacy.Id, medicine.Id, 10, 50m);
-        var inv2 = new PharmacyInventory(pharmacy.Id, medicine.Id, 20, 60m);
+        var inv1 = new PharmacyInventory(pharmacy.Id, branch.Id, medicine.Id, 10, 50m);
+        var inv2 = new PharmacyInventory(pharmacy.Id, branch.Id, medicine.Id, 20, 60m);
 
         context.PharmacyInventories.Add(inv1);
         await context.SaveChangesAsync();
 
         context.PharmacyInventories.Add(inv2);
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
-        Assert.Contains("IX_PharmacyInventories_PharmacyId_MedicineId", ex.InnerException?.Message ?? ex.Message);
+        Assert.Contains("IX_PharmacyInventories_BranchId_MedicineId", ex.InnerException?.Message ?? ex.Message);
     }
 
     [Fact]
     public async Task DatabaseConstraint_DuplicateBarcode_RejectedBySqlServer()
     {
-        var (_, medicine, _) = await CreateBaseEntitiesAsync();
+        var (_, _, medicine, _) = await CreateBaseEntitiesAsync();
         using var context = _fixture.CreateContext();
 
         var barcode = $"BAR_{Guid.NewGuid():N}";
@@ -181,10 +187,10 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
     [Fact]
     public async Task DeleteBehavior_InventoryWithTransactions_DeleteRestricted()
     {
-        var (pharmacy, medicine, user) = await CreateBaseEntitiesAsync();
+        var (pharmacy, branch, medicine, user) = await CreateBaseEntitiesAsync();
         using var context = _fixture.CreateContext();
 
-        var inv = new PharmacyInventory(pharmacy.Id, medicine.Id, 10, 50m);
+        var inv = new PharmacyInventory(pharmacy.Id, branch.Id, medicine.Id, 10, 50m);
         inv.AdjustStock(-2, InventoryAdjustmentReason.Sale, user.Id, "Test sale");
         context.PharmacyInventories.Add(inv);
         await context.SaveChangesAsync();

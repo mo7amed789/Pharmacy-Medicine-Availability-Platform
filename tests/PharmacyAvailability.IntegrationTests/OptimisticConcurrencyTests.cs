@@ -35,12 +35,14 @@ public class OptimisticConcurrencyTests : IClassFixture<DatabaseFixture>
         var pharmacy = new Pharmacy($"Pharm_{Guid.NewGuid():N}", $"LIC_{Guid.NewGuid():N}", "Street", "City", new Coordinates(30.0, 31.0), "+201000000000");
         var user = new User($"user_{Guid.NewGuid():N}@test.com", "hash", "Staff", UserRole.PlatformAdmin);
 
+        var branch = pharmacy.AddBranch("Main Branch", "Street", "City", new Coordinates(30.0, 31.0), "+201000000000");
+
         setupContext.Medicines.Add(med);
         setupContext.Pharmacies.Add(pharmacy);
         setupContext.Users.Add(user);
         await setupContext.SaveChangesAsync();
 
-        var inventory = new PharmacyInventory(pharmacy.Id, med.Id, 20, 100.00m);
+        var inventory = new PharmacyInventory(pharmacy.Id, branch.Id, med.Id, 20, 100.00m);
         setupContext.PharmacyInventories.Add(inventory);
         await setupContext.SaveChangesAsync();
 

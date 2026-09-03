@@ -1,12 +1,21 @@
+using PharmacyAvailability.Domain.Catalog;
 using PharmacyAvailability.Domain.Common;
 using PharmacyAvailability.Domain.Common.Exceptions;
+using PharmacyAvailability.Domain.Pharmacies;
 
 namespace PharmacyAvailability.Domain.Inventory;
 
 public class PharmacyInventory : BaseEntity
 {
     public Guid PharmacyId { get; private set; }
+    public Pharmacy? Pharmacy { get; private set; }
+
+    public Guid BranchId { get; private set; }
+    public PharmacyBranch? Branch { get; private set; }
+
     public Guid MedicineId { get; private set; }
+    public Medicine? Medicine { get; private set; }
+
     public int AvailableQuantity { get; private set; }
     public int ReservedQuantity { get; private set; }
     public decimal Price { get; private set; }
@@ -27,6 +36,7 @@ public class PharmacyInventory : BaseEntity
 
     public PharmacyInventory(
         Guid pharmacyId,
+        Guid branchId,
         Guid medicineId,
         int initialQuantity,
         decimal initialPrice,
@@ -35,6 +45,8 @@ public class PharmacyInventory : BaseEntity
     {
         if (pharmacyId == Guid.Empty)
             throw new DomainValidationException("PharmacyId is required.");
+        if (branchId == Guid.Empty)
+            throw new DomainValidationException("BranchId is required.");
         if (medicineId == Guid.Empty)
             throw new DomainValidationException("MedicineId is required.");
         if (initialQuantity < 0)
@@ -45,6 +57,7 @@ public class PharmacyInventory : BaseEntity
             throw new DomainValidationException("Currency is required.");
 
         PharmacyId = pharmacyId;
+        BranchId = branchId;
         MedicineId = medicineId;
         AvailableQuantity = initialQuantity;
         ReservedQuantity = 0;
@@ -52,6 +65,17 @@ public class PharmacyInventory : BaseEntity
         Currency = currency.Trim().ToUpperInvariant();
         Source = source;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public PharmacyInventory(
+        Guid pharmacyId,
+        Guid medicineId,
+        int initialQuantity,
+        decimal initialPrice,
+        string currency = "EGP",
+        InventorySource source = InventorySource.Manual)
+        : this(pharmacyId, pharmacyId, medicineId, initialQuantity, initialPrice, currency, source)
+    {
     }
 
     public InventoryTransaction AdjustStock(
@@ -75,6 +99,74 @@ public class PharmacyInventory : BaseEntity
             delta,
             newQuantity,
             reason,
+            actorUserId,
+            notes);
+
+        _transactions.Add(transaction);
+        return transaction;
+    }
+
+    public InventoryTransaction Reserve(int quantity, Guid actorUserId, string? notes = null)
+    {
+        if (quantity <= 0)
+            throw new DomainValidationException("Reservation quantity must be greater than zero.");
+        if (AvailableQuantity < quantity)
+            throw new InsufficientStockException(Id, AvailableQuantity, -quantity);
+
+        AvailableQuantity -= quantity;
+        ReservedQuantity += quantity;
+        UpdatedAt = DateTime.UtcNow;
+
+        var transaction = new InventoryTransaction(
+            Id,
+            -quantity,
+            AvailableQuantity,
+            InventoryAdjustmentReason.ReservationHold,
+            actorUserId,
+            notes);
+
+        _transactions.Add(transaction);
+        return transaction;
+    }
+
+    public InventoryTransaction ReleaseReservation(int quantity, Guid actorUserId, string? notes = null)
+    {
+        if (quantity <= 0)
+            throw new DomainValidationException("Release quantity must be greater than zero.");
+        if (ReservedQuantity < quantity)
+            throw new DomainValidationException($"Cannot release {quantity} units; only {ReservedQuantity} units are currently reserved.");
+
+        ReservedQuantity -= quantity;
+        AvailableQuantity += quantity;
+        UpdatedAt = DateTime.UtcNow;
+
+        var transaction = new InventoryTransaction(
+            Id,
+            quantity,
+            AvailableQuantity,
+            InventoryAdjustmentReason.ReservationRelease,
+            actorUserId,
+            notes);
+
+        _transactions.Add(transaction);
+        return transaction;
+    }
+
+    public InventoryTransaction ConfirmReservation(int quantity, Guid actorUserId, string? notes = null)
+    {
+        if (quantity <= 0)
+            throw new DomainValidationException("Confirmation quantity must be greater than zero.");
+        if (ReservedQuantity < quantity)
+            throw new DomainValidationException($"Cannot confirm {quantity} units; only {ReservedQuantity} units are currently reserved.");
+
+        ReservedQuantity -= quantity;
+        UpdatedAt = DateTime.UtcNow;
+
+        var transaction = new InventoryTransaction(
+            Id,
+            0,
+            AvailableQuantity,
+            InventoryAdjustmentReason.ReservationConfirmed,
             actorUserId,
             notes);
 

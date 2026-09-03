@@ -23,6 +23,9 @@ public class PharmacyInventoryConfiguration : IEntityTypeConfiguration<PharmacyI
         builder.Property(pi => pi.PharmacyId)
             .IsRequired();
 
+        builder.Property(pi => pi.BranchId)
+            .IsRequired();
+
         builder.Property(pi => pi.MedicineId)
             .IsRequired();
 
@@ -65,12 +68,17 @@ public class PharmacyInventoryConfiguration : IEntityTypeConfiguration<PharmacyI
             .IsRowVersion();
 
         // Foreign keys to parent entities with Restrict to protect historical records
-        builder.HasOne<Pharmacy>()
+        builder.HasOne(pi => pi.Pharmacy)
             .WithMany()
             .HasForeignKey(pi => pi.PharmacyId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne<Medicine>()
+        builder.HasOne(pi => pi.Branch)
+            .WithMany(b => b.Inventories)
+            .HasForeignKey(pi => pi.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(pi => pi.Medicine)
             .WithMany()
             .HasForeignKey(pi => pi.MedicineId)
             .OnDelete(DeleteBehavior.Restrict);
@@ -92,17 +100,20 @@ public class PharmacyInventoryConfiguration : IEntityTypeConfiguration<PharmacyI
         builder.Navigation(pi => pi.PriceHistories)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-        // Unique constraint: one inventory record per pharmacy/medicine pair
-        builder.HasIndex(pi => new { pi.PharmacyId, pi.MedicineId })
+        // Unique constraint: one inventory record per branch/medicine pair
+        builder.HasIndex(pi => new { pi.BranchId, pi.MedicineId })
             .IsUnique()
-            .HasDatabaseName("IX_PharmacyInventories_PharmacyId_MedicineId");
+            .HasDatabaseName("IX_PharmacyInventories_BranchId_MedicineId");
 
-        // Primary query path: Finding available pharmacies for a given medicine
+        // Primary query path: Finding available pharmacy branches for a given medicine
         builder.HasIndex(pi => new { pi.MedicineId, pi.AvailableQuantity })
-            .IncludeProperties(pi => new { pi.PharmacyId, pi.Price, pi.UpdatedAt, pi.Source })
+            .IncludeProperties(pi => new { pi.BranchId, pi.PharmacyId, pi.Price, pi.UpdatedAt, pi.Source })
             .HasDatabaseName("IX_PharmacyInventories_Medicine_Stock_Covering");
 
-        // Secondary query path: Pharmacy dashboard loading its full inventory
+        // Query paths for branch and pharmacy inventory management
+        builder.HasIndex(pi => pi.BranchId)
+            .HasDatabaseName("IX_PharmacyInventories_BranchId");
+
         builder.HasIndex(pi => pi.PharmacyId)
             .HasDatabaseName("IX_PharmacyInventories_PharmacyId");
     }

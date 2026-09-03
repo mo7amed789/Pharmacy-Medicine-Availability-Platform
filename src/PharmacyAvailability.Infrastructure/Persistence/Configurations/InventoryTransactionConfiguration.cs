@@ -12,7 +12,7 @@ public class InventoryTransactionConfiguration : IEntityTypeConfiguration<Invent
         builder.ToTable("InventoryTransactions", t =>
         {
             t.HasCheckConstraint("CK_InventoryTransactions_ResultingQuantity", "[ResultingQuantity] >= 0");
-            t.HasCheckConstraint("CK_InventoryTransactions_Reason", "[Reason] IN (1, 2, 3, 4, 5, 6, 7)");
+            t.HasCheckConstraint("CK_InventoryTransactions_Reason", "[Reason] IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)");
         });
 
         builder.HasKey(t => t.Id);

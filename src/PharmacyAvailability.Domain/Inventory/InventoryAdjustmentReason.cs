@@ -8,5 +8,8 @@ public enum InventoryAdjustmentReason
     Correction = 4,
     Return = 5,
     Discard = 6,
-    SyncUpdate = 7
+    SyncUpdate = 7,
+    ReservationHold = 8,
+    ReservationRelease = 9,
+    ReservationConfirmed = 10
 }

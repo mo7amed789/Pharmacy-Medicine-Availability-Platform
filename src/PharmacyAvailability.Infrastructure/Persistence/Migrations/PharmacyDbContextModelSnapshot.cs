@@ -513,7 +513,7 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
                     b.ToTable("InventoryTransactions", null, t =>
                         {
-                            t.HasCheckConstraint("CK_InventoryTransactions_Reason", "[Reason] IN (1, 2, 3, 4, 5, 6, 7)");
+                            t.HasCheckConstraint("CK_InventoryTransactions_Reason", "[Reason] IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)");
 
                             t.HasCheckConstraint("CK_InventoryTransactions_ResultingQuantity", "[ResultingQuantity] >= 0");
                         });
@@ -529,6 +529,9 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -571,17 +574,20 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("IX_PharmacyInventories_BranchId");
+
                     b.HasIndex("PharmacyId")
                         .HasDatabaseName("IX_PharmacyInventories_PharmacyId");
+
+                    b.HasIndex("BranchId", "MedicineId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PharmacyInventories_BranchId_MedicineId");
 
                     b.HasIndex("MedicineId", "AvailableQuantity")
                         .HasDatabaseName("IX_PharmacyInventories_Medicine_Stock_Covering");
 
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("MedicineId", "AvailableQuantity"), new[] { "PharmacyId", "Price", "UpdatedAt", "Source" });
-
-                    b.HasIndex("PharmacyId", "MedicineId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_PharmacyInventories_PharmacyId_MedicineId");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("MedicineId", "AvailableQuantity"), new[] { "BranchId", "PharmacyId", "Price", "UpdatedAt", "Source" });
 
                     b.ToTable("PharmacyInventories", null, t =>
                         {
@@ -872,17 +878,29 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("PharmacyAvailability.Domain.Inventory.PharmacyInventory", b =>
                 {
-                    b.HasOne("PharmacyAvailability.Domain.Catalog.Medicine", null)
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", "Branch")
+                        .WithMany("Inventories")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyAvailability.Domain.Catalog.Medicine", "Medicine")
                         .WithMany()
                         .HasForeignKey("MedicineId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.Pharmacy", null)
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.Pharmacy", "Pharmacy")
                         .WithMany()
                         .HasForeignKey("PharmacyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Medicine");
+
+                    b.Navigation("Pharmacy");
                 });
 
             modelBuilder.Entity("PharmacyAvailability.Domain.Inventory.PriceHistory", b =>
@@ -933,6 +951,11 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("PharmacyAvailability.Domain.Pharmacies.Pharmacy", b =>
                 {
                     b.Navigation("Branches");
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", b =>
+                {
+                    b.Navigation("Inventories");
                 });
 #pragma warning restore 612, 618
         }

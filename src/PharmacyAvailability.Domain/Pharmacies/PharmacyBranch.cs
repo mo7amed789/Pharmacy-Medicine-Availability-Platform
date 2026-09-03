@@ -1,12 +1,17 @@
 using PharmacyAvailability.Domain.Common;
 using PharmacyAvailability.Domain.Common.Exceptions;
 
+using PharmacyAvailability.Domain.Inventory;
+
 namespace PharmacyAvailability.Domain.Pharmacies;
 
 public class PharmacyBranch : BaseEntity
 {
     public Guid PharmacyId { get; private set; }
     public Pharmacy? Pharmacy { get; private set; }
+
+    private readonly List<PharmacyInventory> _inventories = new();
+    public IReadOnlyCollection<PharmacyInventory> Inventories => _inventories.AsReadOnly();
 
     public string Name { get; private set; } = string.Empty;
     public string? BranchCode { get; private set; }

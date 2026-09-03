@@ -119,6 +119,17 @@ public class GlobalExceptionHandlingMiddleware
                 };
                 break;
 
+            case ResourceConflictException confEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "Resource Conflict",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8",
+                    Detail = confEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
             case InvalidPriceException priceEx:
                 problem = new ProblemDetails
                 {
