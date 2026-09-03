@@ -10,6 +10,7 @@ public class RefreshToken : BaseEntity
     public DateTime ExpiresAt { get; private set; }
     public DateTime? RevokedAt { get; private set; }
     public string? ReplacedByTokenHash { get; private set; }
+    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public bool IsRevoked => RevokedAt.HasValue;

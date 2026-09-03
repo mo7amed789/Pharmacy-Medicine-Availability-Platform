@@ -21,6 +21,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PharmacyAvailability.Domain\PharmacyAvailability.Domain.csproj" />
     <ProjectReference Include="..\..\src\PharmacyAvailability.Application\PharmacyAvailability.Application.csproj" />
+    <ProjectReference Include="..\..\src\PharmacyAvailability.Infrastructure\PharmacyAvailability.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\PharmacyAvailability.Api\PharmacyAvailability.Api.csproj" />
   </ItemGroup>
 
 </Project>

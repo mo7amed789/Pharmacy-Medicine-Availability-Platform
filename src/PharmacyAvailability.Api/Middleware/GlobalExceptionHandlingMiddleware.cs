@@ -86,6 +86,17 @@ public class GlobalExceptionHandlingMiddleware
 
         switch (exception)
         {
+            case UnauthorizedAccessException unauthEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Title = "Unauthorized",
+                    Type = "https://tools.ietf.org/html/rfc7235#section-3.1",
+                    Detail = unauthEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
             case InsufficientStockException stockEx:
                 problem = new ProblemDetails
                 {

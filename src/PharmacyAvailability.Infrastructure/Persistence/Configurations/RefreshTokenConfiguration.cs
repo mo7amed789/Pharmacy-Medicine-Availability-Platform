@@ -39,5 +39,8 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         builder.Property(rt => rt.CreatedAt)
             .HasColumnType("datetime2")
             .IsRequired();
+
+        builder.Property(rt => rt.RowVersion)
+            .IsRowVersion();
     }
 }
