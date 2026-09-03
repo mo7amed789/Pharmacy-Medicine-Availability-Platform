@@ -25,6 +25,7 @@ public class PharmacyDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Pharmacy> Pharmacies => Set<Pharmacy>();
+    public DbSet<PharmacyBranch> PharmacyBranches => Set<PharmacyBranch>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Manufacturer> Manufacturers => Set<Manufacturer>();
     public DbSet<Medicine> Medicines => Set<Medicine>();

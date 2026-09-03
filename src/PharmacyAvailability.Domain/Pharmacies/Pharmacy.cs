@@ -19,6 +19,9 @@ public class Pharmacy : BaseEntity
 
     public bool IsActive => Status == PharmacyStatus.Active;
 
+    private readonly List<PharmacyBranch> _branches = new();
+    public IReadOnlyCollection<PharmacyBranch> Branches => _branches.AsReadOnly();
+
     // Required by EF Core
     protected Pharmacy() { }
 
@@ -30,7 +33,8 @@ public class Pharmacy : BaseEntity
         Coordinates coordinates,
         string phone,
         string? email = null,
-        string? openingHours = null)
+        string? openingHours = null,
+        PharmacyStatus initialStatus = PharmacyStatus.Active)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainValidationException("Pharmacy name is required.");
@@ -53,8 +57,34 @@ public class Pharmacy : BaseEntity
         Phone = phone.Trim();
         Email = email?.Trim().ToLowerInvariant();
         OpeningHours = openingHours?.Trim();
-        Status = PharmacyStatus.Active;
+        Status = initialStatus;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public PharmacyBranch AddBranch(
+        string name,
+        string address,
+        string city,
+        Coordinates coordinates,
+        string phone,
+        string? openingHours = null,
+        string? branchCode = null,
+        bool isActive = true)
+    {
+        var branch = new PharmacyBranch(
+            Id,
+            name,
+            address,
+            city,
+            coordinates,
+            phone,
+            openingHours,
+            branchCode,
+            isActive);
+
+        _branches.Add(branch);
+        UpdatedAt = DateTime.UtcNow;
+        return branch;
     }
 
     public void UpdateProfile(string name, string address, string city, string phone, string? email, string? openingHours)
@@ -88,6 +118,30 @@ public class Pharmacy : BaseEntity
     public void SetStatus(PharmacyStatus newStatus)
     {
         Status = newStatus;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Approve()
+    {
+        Status = PharmacyStatus.Active;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Suspend()
+    {
+        Status = PharmacyStatus.Suspended;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Reactivate()
+    {
+        Status = PharmacyStatus.Active;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Deactivate()
+    {
+        Status = PharmacyStatus.Deactivated;
         UpdatedAt = DateTime.UtcNow;
     }
 }

@@ -704,6 +704,79 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BranchCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal>("Longitude")
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OpeningHours")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("PharmacyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("City")
+                        .HasDatabaseName("IX_PharmacyBranches_City");
+
+                    b.HasIndex("PharmacyId")
+                        .HasDatabaseName("IX_PharmacyBranches_PharmacyId");
+
+                    b.HasIndex("IsActive", "Latitude", "Longitude")
+                        .HasDatabaseName("IX_PharmacyBranches_IsActive_Coordinates");
+
+                    b.ToTable("PharmacyBranches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PharmacyBranches_Latitude", "[Latitude] >= -90.0 AND [Latitude] <= 90.0");
+
+                            t.HasCheckConstraint("CK_PharmacyBranches_Longitude", "[Longitude] >= -180.0 AND [Longitude] <= 180.0");
+                        });
+                });
+
             modelBuilder.Entity("PharmacyAvailability.Domain.Auditing.AuditLog", b =>
                 {
                     b.HasOne("PharmacyAvailability.Domain.Identity.User", null)
@@ -714,17 +787,21 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("PharmacyAvailability.Domain.Catalog.Medicine", b =>
                 {
-                    b.HasOne("PharmacyAvailability.Domain.Catalog.Category", null)
+                    b.HasOne("PharmacyAvailability.Domain.Catalog.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PharmacyAvailability.Domain.Catalog.Manufacturer", null)
+                    b.HasOne("PharmacyAvailability.Domain.Catalog.Manufacturer", "Manufacturer")
                         .WithMany()
                         .HasForeignKey("ManufacturerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Manufacturer");
                 });
 
             modelBuilder.Entity("PharmacyAvailability.Domain.Catalog.MedicineAlias", b =>
@@ -823,6 +900,17 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.Pharmacy", "Pharmacy")
+                        .WithMany("Branches")
+                        .HasForeignKey("PharmacyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pharmacy");
+                });
+
             modelBuilder.Entity("PharmacyAvailability.Domain.Catalog.Medicine", b =>
                 {
                     b.Navigation("Aliases");
@@ -840,6 +928,11 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                     b.Navigation("PriceHistories");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Pharmacies.Pharmacy", b =>
+                {
+                    b.Navigation("Branches");
                 });
 #pragma warning restore 612, 618
         }

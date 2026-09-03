@@ -71,5 +71,14 @@ public class PharmacyConfiguration : IEntityTypeConfiguration<Pharmacy>
         // Index for location-based queries filtering by active status
         builder.HasIndex(p => new { p.Status, p.Latitude, p.Longitude })
             .HasDatabaseName("IX_Pharmacies_Status_Coordinates");
+
+        // Child branches navigation
+        builder.HasMany(p => p.Branches)
+            .WithOne(b => b.Pharmacy)
+            .HasForeignKey(b => b.PharmacyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Navigation(p => p.Branches)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }
