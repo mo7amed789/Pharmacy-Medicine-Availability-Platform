@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PharmacyAvailability.Application\PharmacyAvailability.Application.csproj" />
+    <ProjectReference Include="..\PharmacyAvailability.Infrastructure\PharmacyAvailability.Infrastructure.csproj" />
+    <ProjectReference Include="..\PharmacyAvailability.Contracts\PharmacyAvailability.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

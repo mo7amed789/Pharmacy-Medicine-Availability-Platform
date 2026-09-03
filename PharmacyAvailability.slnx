@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PharmacyAvailability.Api/PharmacyAvailability.Api.csproj" />
+    <Project Path="src/PharmacyAvailability.Application/PharmacyAvailability.Application.csproj" />
+    <Project Path="src/PharmacyAvailability.Contracts/PharmacyAvailability.Contracts.csproj" />
+    <Project Path="src/PharmacyAvailability.Domain/PharmacyAvailability.Domain.csproj" />
+    <Project Path="src/PharmacyAvailability.Infrastructure/PharmacyAvailability.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PharmacyAvailability.IntegrationTests/PharmacyAvailability.IntegrationTests.csproj" />
+    <Project Path="tests/PharmacyAvailability.UnitTests/PharmacyAvailability.UnitTests.csproj" />
+  </Folder>
+</Solution>
