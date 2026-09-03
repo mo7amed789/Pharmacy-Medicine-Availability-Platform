@@ -129,7 +129,11 @@ public class PharmacyInventory : BaseEntity
         return transaction;
     }
 
-    public InventoryTransaction ReleaseReservation(int quantity, Guid actorUserId, string? notes = null)
+    public InventoryTransaction ReleaseReservation(
+        int quantity,
+        Guid actorUserId,
+        string? notes = null,
+        InventoryAdjustmentReason reason = InventoryAdjustmentReason.ReservationRelease)
     {
         if (quantity <= 0)
             throw new DomainValidationException("Release quantity must be greater than zero.");
@@ -144,7 +148,7 @@ public class PharmacyInventory : BaseEntity
             Id,
             quantity,
             AvailableQuantity,
-            InventoryAdjustmentReason.ReservationRelease,
+            reason,
             actorUserId,
             notes);
 

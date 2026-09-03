@@ -6,6 +6,7 @@ using PharmacyAvailability.Domain.Identity;
 using PharmacyAvailability.Domain.Integration;
 using PharmacyAvailability.Domain.Inventory;
 using PharmacyAvailability.Domain.Pharmacies;
+using PharmacyAvailability.Domain.Reservations;
 
 namespace PharmacyAvailability.Infrastructure.Persistence;
 
@@ -34,6 +35,7 @@ public class PharmacyDbContext : DbContext
     public DbSet<PharmacyInventory> PharmacyInventories => Set<PharmacyInventory>();
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<PriceHistory> PriceHistories => Set<PriceHistory>();
+    public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<PharmacyProductMapping> PharmacyProductMappings => Set<PharmacyProductMapping>();
     public DbSet<InventorySyncLog> InventorySyncLogs => Set<InventorySyncLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

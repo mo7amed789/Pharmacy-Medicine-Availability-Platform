@@ -513,7 +513,7 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
                     b.ToTable("InventoryTransactions", null, t =>
                         {
-                            t.HasCheckConstraint("CK_InventoryTransactions_Reason", "[Reason] IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)");
+                            t.HasCheckConstraint("CK_InventoryTransactions_Reason", "[Reason] IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)");
 
                             t.HasCheckConstraint("CK_InventoryTransactions_ResultingQuantity", "[ResultingQuantity] >= 0");
                         });
@@ -783,6 +783,73 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PharmacyAvailability.Domain.Reservations.Reservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("MedicineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PharmacyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedicineId");
+
+                    b.HasIndex("CustomerId", "CreatedAt");
+
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.HasIndex("BranchId", "MedicineId", "Status");
+
+                    b.HasIndex("PharmacyId", "BranchId", "Status");
+
+                    b.ToTable("Reservations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Reservations_ExpiresAt", "[ExpiresAt] > [CreatedAt]");
+
+                            t.HasCheckConstraint("CK_Reservations_Quantity", "[Quantity] > 0");
+
+                            t.HasCheckConstraint("CK_Reservations_Status", "[Status] IN (1, 2, 3, 4, 5)");
+                        });
+                });
+
             modelBuilder.Entity("PharmacyAvailability.Domain.Auditing.AuditLog", b =>
                 {
                     b.HasOne("PharmacyAvailability.Domain.Identity.User", null)
@@ -925,6 +992,41 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .HasForeignKey("PharmacyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Pharmacy");
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Reservations.Reservation", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyAvailability.Domain.Identity.User", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyAvailability.Domain.Catalog.Medicine", "Medicine")
+                        .WithMany()
+                        .HasForeignKey("MedicineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.Pharmacy", "Pharmacy")
+                        .WithMany()
+                        .HasForeignKey("PharmacyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Medicine");
 
                     b.Navigation("Pharmacy");
                 });

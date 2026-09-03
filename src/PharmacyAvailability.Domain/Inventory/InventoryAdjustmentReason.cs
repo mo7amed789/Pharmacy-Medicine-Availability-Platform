@@ -11,5 +11,6 @@ public enum InventoryAdjustmentReason
     SyncUpdate = 7,
     ReservationHold = 8,
     ReservationRelease = 9,
-    ReservationConfirmed = 10
+    ReservationConfirmed = 10,
+    ReservationExpired = 11
 }
