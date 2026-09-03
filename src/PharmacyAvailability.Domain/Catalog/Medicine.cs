@@ -11,7 +11,11 @@ public class Medicine : BaseEntity
     public string Strength { get; private set; } = string.Empty;
     public string DosageForm { get; private set; } = string.Empty;
     public Guid CategoryId { get; private set; }
+    public Category? Category { get; private set; }
+
     public Guid ManufacturerId { get; private set; }
+    public Manufacturer? Manufacturer { get; private set; }
+
     public string? Description { get; private set; }
     public bool RequiresPrescription { get; private set; }
     public bool IsActive { get; private set; } = true;
@@ -101,6 +105,20 @@ public class Medicine : BaseEntity
         Description = description?.Trim();
         RequiresPrescription = requiresPrescription;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateDetails(
+        string brandName,
+        string genericName,
+        string activeIngredient,
+        string strength,
+        string dosageForm,
+        Guid categoryId,
+        Guid manufacturerId,
+        bool requiresPrescription,
+        string? description = null)
+    {
+        UpdateDetails(brandName, genericName, activeIngredient, strength, dosageForm, categoryId, manufacturerId, description, requiresPrescription);
     }
 
     public MedicineBarcode AddBarcode(string barcode, bool isPrimary = false)

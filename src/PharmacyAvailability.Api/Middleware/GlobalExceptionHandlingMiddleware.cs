@@ -86,6 +86,17 @@ public class GlobalExceptionHandlingMiddleware
 
         switch (exception)
         {
+            case KeyNotFoundException notFoundEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status404NotFound,
+                    Title = "Resource Not Found",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    Detail = notFoundEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
             case UnauthorizedAccessException unauthEx:
                 problem = new ProblemDetails
                 {

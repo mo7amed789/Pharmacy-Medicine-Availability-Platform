@@ -58,12 +58,12 @@ public class MedicineConfiguration : IEntityTypeConfiguration<Medicine>
             .IsRequired();
 
         // Foreign Key Relationships
-        builder.HasOne<Category>()
+        builder.HasOne(m => m.Category)
             .WithMany()
             .HasForeignKey(m => m.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne<Manufacturer>()
+        builder.HasOne(m => m.Manufacturer)
             .WithMany()
             .HasForeignKey(m => m.ManufacturerId)
             .OnDelete(DeleteBehavior.Restrict);
