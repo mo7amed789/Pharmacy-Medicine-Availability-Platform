@@ -173,7 +173,7 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
             <div className="flex items-start gap-2 rounded-md bg-blue-50/70 p-3 text-xs text-blue-900 border border-blue-100">
               <Clock className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
               <span>
-                Reservations are held for <strong>120 minutes</strong>. Stock will be automatically released back into inventory if not picked up before expiration.
+                Reservations are held for <strong>60 minutes (1 hour)</strong>. Stock will be automatically released back into inventory if not picked up before expiration.
               </span>
             </div>
           </div>

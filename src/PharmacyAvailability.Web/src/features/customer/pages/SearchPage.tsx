@@ -78,7 +78,7 @@ export function SearchPage() {
   };
 
   const handleReservationSuccess = () => {
-    setSuccessNotice(`Hold placed successfully! Your order is reserved for 120 minutes.`);
+    setSuccessNotice(`Hold placed successfully! Your order is reserved for 60 minutes (1 hour).`);
     refetch();
     setTimeout(() => setSuccessNotice(null), 6000);
   };
