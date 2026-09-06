@@ -268,77 +268,89 @@ public static class DevelopmentDataSeeder
         // ──────────────────────────────────────────
         //  6. User Accounts
         // ──────────────────────────────────────────
-        if (!await db.Users.AnyAsync(u => u.Role == UserRole.PlatformAdmin))
+        var pharmacies = await db.Pharmacies
+            .Where(p => p.Status == PharmacyStatus.Active)
+            .OrderBy(p => p.Name)
+            .ToListAsync();
+
+        var dummyUser = new User("dummy@temp.com", "temp", "Dummy", UserRole.Customer, "+20-10-0000-0000");
+
+        // Platform Admin
+        if (!await db.Users.AnyAsync(u => u.Email == "admin@pharma.com"))
         {
-            var pharmacies = await db.Pharmacies
-                .Where(p => p.Status == PharmacyStatus.Active)
-                .OrderBy(p => p.Name)
-                .ToListAsync();
-
-            var dummyUser = new User("dummy@temp.com", "temp", "Dummy", UserRole.Customer, "+20-10-0000-0000");
-
-            // Platform Admin
             var adminHash = passwordHasher.HashPassword(dummyUser, "Admin123!");
             var admin = new User("admin@pharma.com", adminHash, "Platform Administrator", UserRole.PlatformAdmin, "+20-10-0000-0001");
             admin.SetVerificationStatus(true, true);
             db.Users.Add(admin);
+            logger.LogInformation("DevelopmentDataSeeder: Seeded PlatformAdmin (admin@pharma.com).");
+        }
 
-            // Pharmacy Admin for El-Ezaby
-            var ezaby = pharmacies.FirstOrDefault(p => p.Name.Contains("Ezaby"));
-            if (ezaby != null)
-            {
-                var pharmacyAdminHash = passwordHasher.HashPassword(dummyUser, "Pharmacy123!");
-                var pharmacyAdmin = new User("ezaby.admin@pharma.com", pharmacyAdminHash, "Ahmed El-Ezaby", UserRole.PharmacyAdmin, "+20-10-0000-0002", ezaby.Id);
-                pharmacyAdmin.SetVerificationStatus(true, true);
-                db.Users.Add(pharmacyAdmin);
+        // Pharmacy Admin for El-Ezaby
+        var ezabyPharmacy = pharmacies.FirstOrDefault(p => p.Name.Contains("Ezaby"));
+        if (ezabyPharmacy != null && !await db.Users.AnyAsync(u => u.Email == "ezaby.admin@pharma.com"))
+        {
+            var pharmacyAdminHash = passwordHasher.HashPassword(dummyUser, "Pharmacy123!");
+            var pharmacyAdmin = new User("ezaby.admin@pharma.com", pharmacyAdminHash, "Ahmed El-Ezaby", UserRole.PharmacyAdmin, "+20-10-0000-0002", ezabyPharmacy.Id);
+            pharmacyAdmin.SetVerificationStatus(true, true);
+            db.Users.Add(pharmacyAdmin);
+            logger.LogInformation("DevelopmentDataSeeder: Seeded PharmacyAdmin (ezaby.admin@pharma.com).");
+        }
 
-                // Staff member for El-Ezaby
-                var staffHash = passwordHasher.HashPassword(dummyUser, "Staff123!");
-                var staff = new User("ezaby.staff@pharma.com", staffHash, "Mohamed Hassan", UserRole.PharmacyStaff, "+20-10-0000-0003", ezaby.Id);
-                staff.SetVerificationStatus(true, true);
-                db.Users.Add(staff);
-            }
+        // Staff member for El-Ezaby
+        if (ezabyPharmacy != null && !await db.Users.AnyAsync(u => u.Email == "ezaby.staff@pharma.com"))
+        {
+            var staffHash = passwordHasher.HashPassword(dummyUser, "Staff123!");
+            var staff = new User("ezaby.staff@pharma.com", staffHash, "Mohamed Hassan", UserRole.PharmacyStaff, "+20-10-0000-0003", ezabyPharmacy.Id);
+            staff.SetVerificationStatus(true, true);
+            db.Users.Add(staff);
+            logger.LogInformation("DevelopmentDataSeeder: Seeded PharmacyStaff (ezaby.staff@pharma.com).");
+        }
 
-            // Pharmacy Admin for Seif
-            var seif = pharmacies.FirstOrDefault(p => p.Name.Contains("Seif"));
-            if (seif != null)
-            {
-                var seifAdminHash = passwordHasher.HashPassword(dummyUser, "Pharmacy123!");
-                var seifAdmin = new User("seif.admin@pharma.com", seifAdminHash, "Sara Seif", UserRole.PharmacyAdmin, "+20-10-0000-0004", seif.Id);
-                seifAdmin.SetVerificationStatus(true, true);
-                db.Users.Add(seifAdmin);
-            }
+        // Pharmacy Admin for Seif
+        var seifPharmacy = pharmacies.FirstOrDefault(p => p.Name.Contains("Seif"));
+        if (seifPharmacy != null && !await db.Users.AnyAsync(u => u.Email == "seif.admin@pharma.com"))
+        {
+            var seifAdminHash = passwordHasher.HashPassword(dummyUser, "Pharmacy123!");
+            var seifAdmin = new User("seif.admin@pharma.com", seifAdminHash, "Sara Seif", UserRole.PharmacyAdmin, "+20-10-0000-0004", seifPharmacy.Id);
+            seifAdmin.SetVerificationStatus(true, true);
+            db.Users.Add(seifAdmin);
+            logger.LogInformation("DevelopmentDataSeeder: Seeded PharmacyAdmin (seif.admin@pharma.com).");
+        }
 
-            // Test Customer
+        // Test Customer
+        if (!await db.Users.AnyAsync(u => u.Email == "customer@test.com"))
+        {
             var customerHash = passwordHasher.HashPassword(dummyUser, "Customer123!");
             var customer = new User("customer@test.com", customerHash, "Test Customer", UserRole.Customer, "+20-10-0000-0005");
             customer.SetVerificationStatus(true, true);
             db.Users.Add(customer);
-
-            await db.SaveChangesAsync();
-            logger.LogInformation("DevelopmentDataSeeder: Seeded user accounts (admin, pharmacy staff, customer).");
+            logger.LogInformation("DevelopmentDataSeeder: Seeded Customer (customer@test.com).");
         }
-        else
-        {
-            // Ensure any pre-existing seeded admin/pharmacy/test users are verified
-            var unverifiedSeededUsers = await db.Users
-                .Where(u => (!u.IsEmailVerified || !u.IsPhoneVerified) &&
-                            (u.Email == "admin@pharma.com" ||
-                             u.Email == "ezaby.admin@pharma.com" ||
-                             u.Email == "ezaby.staff@pharma.com" ||
-                             u.Email == "seif.admin@pharma.com" ||
-                             u.Email == "customer@test.com"))
-                .ToListAsync();
 
-            if (unverifiedSeededUsers.Any())
+        await db.SaveChangesAsync();
+
+        // Ensure all seeded demo users are verified
+        var seededEmails = new[]
+        {
+            "admin@pharma.com",
+            "ezaby.admin@pharma.com",
+            "ezaby.staff@pharma.com",
+            "seif.admin@pharma.com",
+            "customer@test.com"
+        };
+
+        var seededUsers = await db.Users
+            .Where(u => seededEmails.Contains(u.Email) && (!u.IsEmailVerified || !u.IsPhoneVerified))
+            .ToListAsync();
+
+        if (seededUsers.Any())
+        {
+            foreach (var user in seededUsers)
             {
-                foreach (var user in unverifiedSeededUsers)
-                {
-                    user.SetVerificationStatus(true, true);
-                }
-                await db.SaveChangesAsync();
-                logger.LogInformation("DevelopmentDataSeeder: Updated {Count} pre-existing seeded users to verified.", unverifiedSeededUsers.Count);
+                user.SetVerificationStatus(true, true);
             }
+            await db.SaveChangesAsync();
+            logger.LogInformation("DevelopmentDataSeeder: Updated {Count} seeded users to verified.", seededUsers.Count);
         }
 
         logger.LogInformation("DevelopmentDataSeeder: Seed check complete.");
