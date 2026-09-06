@@ -1,6 +1,7 @@
 import { Search, Navigation, SlidersHorizontal, X, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface MedicineSearchBarProps {
   searchTerm: string;
@@ -39,25 +40,27 @@ export function MedicineSearchBar({
   onUseDemoLocation,
   isLocating,
 }: MedicineSearchBarProps) {
+  const { t, language } = useTranslation();
+
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
       <div className="flex flex-col md:flex-row gap-3">
         {/* Main Search Input */}
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
+          <Search className="absolute start-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
           <Input
             type="text"
-            placeholder="Search medicine brand, active ingredient, barcode, or generic name..."
+            placeholder={t('customer.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 h-11 text-sm bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800"
+            className="ps-10 h-11 text-sm bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              title="Clear search"
+              className="absolute end-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              title={t('common.clear')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -75,10 +78,10 @@ export function MedicineSearchBar({
                 className="h-9 flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700"
                 onClick={onRequestLocation}
                 disabled={isLocating}
-                title="Refresh current location"
+                title={language === 'ar' ? 'تحديث الموقع الحالي' : 'Refresh current location'}
               >
                 <Navigation className={`h-3.5 w-3.5 ${isLocating ? 'animate-spin' : ''}`} />
-                <span>{isLocating ? 'Locating...' : 'Nearby Active'}</span>
+                <span>{isLocating ? (language === 'ar' ? 'جارٍ التحديد...' : 'Locating...') : (language === 'ar' ? 'الموقع نشط' : 'Nearby Active')}</span>
               </Button>
               {onClearLocation && (
                 <Button
@@ -87,10 +90,10 @@ export function MedicineSearchBar({
                   size="sm"
                   className="h-9 px-2 text-xs text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                   onClick={onClearLocation}
-                  title="Remove location filter (Show nationwide)"
+                  title={t('customer.clearLocation')}
                 >
-                  <X className="h-3.5 w-3.5 mr-1" />
-                  Clear GPS
+                  <X className="h-3.5 w-3.5 me-1" />
+                  {language === 'ar' ? 'مسح الموقع' : 'Clear GPS'}
                 </Button>
               )}
             </div>
@@ -104,7 +107,7 @@ export function MedicineSearchBar({
                 disabled={isLocating}
               >
                 <Navigation className={`h-4 w-4 ${isLocating ? 'animate-spin' : ''}`} />
-                <span>{isLocating ? 'Locating...' : 'Use My GPS'}</span>
+                <span>{isLocating ? (language === 'ar' ? 'جارٍ التحديد...' : 'Locating...') : (language === 'ar' ? 'تحديد موقعي' : 'Use My GPS')}</span>
               </Button>
               {onUseDemoLocation && (
                 <Button
@@ -112,10 +115,10 @@ export function MedicineSearchBar({
                   variant="secondary"
                   className="h-11 flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                   onClick={onUseDemoLocation}
-                  title="Test with Cairo coordinates (Downtown Cairo)"
+                  title={t('customer.cairoDemoGps')}
                 >
                   <MapPin className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Cairo Demo GPS</span>
+                  <span>{t('customer.cairoDemoGps')}</span>
                 </Button>
               )}
             </div>
@@ -125,7 +128,7 @@ export function MedicineSearchBar({
 
       {/* Quick Test Chips */}
       <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
-        <span className="text-slate-400 dark:text-slate-500 font-medium mr-1">Quick Test:</span>
+        <span className="text-slate-400 dark:text-slate-500 font-medium me-1">{t('customer.quickChipsTitle')}</span>
         {POPULAR_MEDICINES.map((tag) => {
           const isAll = tag === 'All Medicines';
           const isSelected = (isAll && !searchTerm) || searchTerm.toLowerCase() === tag.toLowerCase();
@@ -141,7 +144,7 @@ export function MedicineSearchBar({
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              {tag}
+              {isAll ? (language === 'ar' ? 'جميع الأدوية' : 'All Medicines') : tag}
             </button>
           );
         })}
@@ -151,37 +154,39 @@ export function MedicineSearchBar({
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
           <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-          <span className="font-semibold">Sort By:</span>
+          <span className="font-semibold">{language === 'ar' ? 'الترتيب حسب:' : 'Sort By:'}</span>
           <select
             value={sortBy}
             onChange={(e) => onSortChange(e.target.value)}
             className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option value="distance">Nearest Distance</option>
-            <option value="price">Lowest Price</option>
-            <option value="quantity">Highest Stock</option>
-            <option value="freshness">Freshest Inventory</option>
+            <option value="distance">{language === 'ar' ? 'الأقرب مسافة' : 'Nearest Distance'}</option>
+            <option value="price">{language === 'ar' ? 'الأقل سعراً' : 'Lowest Price'}</option>
+            <option value="quantity">{language === 'ar' ? 'الأعلى توفراً' : 'Highest Stock'}</option>
+            <option value="freshness">{language === 'ar' ? 'الأحدث تحديثاً' : 'Freshest Inventory'}</option>
           </select>
         </div>
 
         {hasLocation ? (
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-            <span className="font-semibold">Radius:</span>
+            <span className="font-semibold">{language === 'ar' ? 'نطاق البحث:' : 'Radius:'}</span>
             <select
               value={radiusKm}
               onChange={(e) => onRadiusChange(Number(e.target.value))}
               className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="5">5 km</option>
-              <option value="10">10 km</option>
-              <option value="15">15 km</option>
-              <option value="25">25 km</option>
-              <option value="50">50 km</option>
+              <option value="5">{language === 'ar' ? '5 كم' : '5 km'}</option>
+              <option value="10">{language === 'ar' ? '10 كم' : '10 km'}</option>
+              <option value="15">{language === 'ar' ? '15 كم' : '15 km'}</option>
+              <option value="25">{language === 'ar' ? '25 كم' : '25 km'}</option>
+              <option value="50">{language === 'ar' ? '50 كم' : '50 km'}</option>
             </select>
           </div>
         ) : (
           <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-            Showing all pharmacies nationwide (no radius limit)
+            {language === 'ar'
+              ? 'يتم عرض جميع الصيدليات على مستوى الجمهورية (دون تقييد بالموقع)'
+              : 'Showing all pharmacies nationwide (no radius limit)'}
           </span>
         )}
       </div>

@@ -2,13 +2,16 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { ShieldAlert, Building2, BookOpen, Clock } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function AdminLayout() {
+  const { t, language } = useTranslation();
+
   const navItems = [
-    { label: 'Platform Overview', path: '/admin/dashboard', icon: ShieldAlert },
-    { label: 'Pharmacy Approvals', path: '/admin/pharmacies', icon: Building2 },
-    { label: 'Central Catalog', path: '/admin/catalog', icon: BookOpen },
-    { label: 'Reservations Oversight', path: '/admin/reservations', icon: Clock },
+    { label: language === 'ar' ? 'نظرة عامة' : 'Platform Overview', path: '/admin/dashboard', icon: ShieldAlert },
+    { label: t('admin.pharmacyApprovals'), path: '/admin/pharmacies', icon: Building2 },
+    { label: t('admin.centralCatalog'), path: '/admin/catalog', icon: BookOpen },
+    { label: t('admin.reservationsOversight'), path: '/admin/reservations', icon: Clock },
   ];
 
   return (
@@ -24,13 +27,15 @@ export function AdminLayout() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-base">Platform Administration</span>
+                <span className="font-bold text-white text-base">
+                  {language === 'ar' ? 'الإدارة المركزية للمنصة' : 'Platform Administration'}
+                </span>
                 <Badge variant="default" className="bg-purple-600 text-white text-xs">
-                  Superuser
+                  {language === 'ar' ? 'مسؤول النظام' : 'Superuser'}
                 </Badge>
               </div>
               <p className="text-xs text-purple-200">
-                Centralized catalog management, pharmacy onboarding approval, and system reservation releases.
+                {t('admin.superuserSubtitle')}
               </p>
             </div>
           </div>

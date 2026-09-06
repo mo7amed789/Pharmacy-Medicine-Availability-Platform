@@ -2,6 +2,7 @@ import { AlertCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ApiError } from '@/api/apiClient';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface ErrorStateProps {
   error: unknown;
@@ -9,8 +10,10 @@ interface ErrorStateProps {
   title?: string;
 }
 
-export function ErrorState({ error, onRetry, title = 'Unable to Load Data' }: ErrorStateProps) {
-  let errorMessage = 'An unexpected error occurred while communicating with the server.';
+export function ErrorState({ error, onRetry, title }: ErrorStateProps) {
+  const { language } = useTranslation();
+  const displayTitle = title || (language === 'ar' ? 'تعذر تحميل البيانات' : 'Unable to Load Data');
+  let errorMessage = language === 'ar' ? 'حدث خطأ غير متوقع أثناء الاتصال بالخادم.' : 'An unexpected error occurred while communicating with the server.';
   let correlationId: string | undefined;
   let statusCode: number | undefined;
   let validationErrors: Record<string, string[]> | undefined;
@@ -31,7 +34,7 @@ export function ErrorState({ error, onRetry, title = 'Unable to Load Data' }: Er
       </div>
 
       <div className="flex items-center gap-2 mb-1">
-        <h4 className="text-base font-semibold text-red-900 dark:text-red-300">{title}</h4>
+        <h4 className="text-base font-semibold text-red-900 dark:text-red-300">{displayTitle}</h4>
         {statusCode && (
           <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
             HTTP {statusCode}
@@ -42,8 +45,10 @@ export function ErrorState({ error, onRetry, title = 'Unable to Load Data' }: Er
       <p className="mt-1 max-w-md text-sm text-red-700 dark:text-red-400">{errorMessage}</p>
 
       {validationErrors && Object.keys(validationErrors).length > 0 && (
-        <div className="mt-3 text-left w-full max-w-md rounded-md bg-white dark:bg-slate-900 p-3 border border-red-200 dark:border-red-900/50 text-xs">
-          <p className="font-semibold text-red-800 dark:text-red-300 mb-1">Validation details:</p>
+        <div className="mt-3 text-start w-full max-w-md rounded-md bg-white dark:bg-slate-900 p-3 border border-red-200 dark:border-red-900/50 text-xs">
+          <p className="font-semibold text-red-800 dark:text-red-300 mb-1">
+            {language === 'ar' ? 'تفاصيل التحقق من البيانات:' : 'Validation details:'}
+          </p>
           <ul className="list-disc list-inside space-y-0.5 text-red-600 dark:text-red-400">
             {Object.entries(validationErrors).flatMap(([field, msgs]) =>
               msgs.map((msg, idx) => (
@@ -70,7 +75,7 @@ export function ErrorState({ error, onRetry, title = 'Unable to Load Data' }: Er
           className="mt-4 border-red-300 dark:border-red-800 text-red-800 dark:text-red-300 hover:bg-red-100/50 dark:hover:bg-red-900/30 flex items-center gap-1.5"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          Try Again
+          {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
         </Button>
       )}
     </div>

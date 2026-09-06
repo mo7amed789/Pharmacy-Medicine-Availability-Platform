@@ -18,6 +18,7 @@ import { pharmacyOpsApi } from '@/features/pharmacy/api/pharmacyOpsApi';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function PharmacyLayout() {
   const { user } = useAuthStore();
@@ -54,16 +55,18 @@ export function PharmacyLayout() {
     },
   });
 
+  const { t, language } = useTranslation();
+
   const navItems = [
-    { label: 'Dashboard', path: '/pharmacy/dashboard', icon: LayoutDashboard },
-    { label: 'Pickup Queue', path: '/pharmacy/queue', icon: ClipboardList },
-    { label: 'Inventory', path: '/pharmacy/inventory', icon: Boxes },
-    { label: 'Low Stock Alerts', path: '/pharmacy/low-stock', icon: AlertTriangle },
-    { label: 'Activity Feed', path: '/pharmacy/activity', icon: History },
+    { label: t('pharmacy.dashboard'), path: '/pharmacy/dashboard', icon: LayoutDashboard },
+    { label: t('pharmacy.pickupQueue'), path: '/pharmacy/queue', icon: ClipboardList },
+    { label: t('pharmacy.inventory'), path: '/pharmacy/inventory', icon: Boxes },
+    { label: t('pharmacy.lowStock'), path: '/pharmacy/low-stock', icon: AlertTriangle },
+    { label: language === 'ar' ? 'سجل النشاط' : 'Activity Feed', path: '/pharmacy/activity', icon: History },
   ];
 
   if (user?.role === 'PharmacyAdmin' || user?.role === 'PlatformAdmin') {
-    navItems.push({ label: 'Staff Management', path: '/pharmacy/staff', icon: Users });
+    navItems.push({ label: t('pharmacy.staff'), path: '/pharmacy/staff', icon: Users });
   }
 
   return (
@@ -79,15 +82,15 @@ export function PharmacyLayout() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">Branch Operations Portal</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{t('pharmacy.portalTitle')}</span>
                 {currentBranch && (
                   <Badge variant={currentBranch.isActive ? 'success' : 'destructive'} className="text-xs">
-                    {currentBranch.isActive ? 'Branch Open' : 'Branch Closed'}
+                    {currentBranch.isActive ? t('pharmacy.branchOpen') : t('pharmacy.branchClosed')}
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {currentBranch ? `${currentBranch.pharmacyName} — ${currentBranch.name}` : 'Select a branch'}
+                {currentBranch ? `${currentBranch.pharmacyName} — ${currentBranch.name}` : (language === 'ar' ? 'يرجى اختيار فرع' : 'Select a branch')}
               </p>
             </div>
           </div>
@@ -125,7 +128,9 @@ export function PharmacyLayout() {
                 }
               >
                 <Power className="h-3.5 w-3.5" />
-                {currentBranch.isActive ? 'Close Branch' : 'Open Branch'}
+                {currentBranch.isActive
+                  ? (language === 'ar' ? 'إغلاق الفرع' : 'Close Branch')
+                  : (language === 'ar' ? 'فتح الفرع' : 'Open Branch')}
               </Button>
             )}
           </div>

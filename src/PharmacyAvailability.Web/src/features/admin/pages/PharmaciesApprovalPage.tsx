@@ -16,8 +16,10 @@ import {
 import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function PharmaciesApprovalPage() {
+  const { t, language } = useTranslation();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<PharmacyStatus | ''>('');
 
@@ -49,14 +51,14 @@ export function PharmaciesApprovalPage() {
   const getStatusBadge = (status: PharmacyStatus) => {
     switch (status) {
       case 'Pending':
-        return <Badge variant="warning">Pending Review</Badge>;
+        return <Badge variant="warning">{t('admin.statusPending')}</Badge>;
       case 'Active':
       case 'Approved':
-        return <Badge variant="success">Active</Badge>;
+        return <Badge variant="success">{t('admin.statusActive')}</Badge>;
       case 'Suspended':
-        return <Badge variant="destructive">Suspended</Badge>;
+        return <Badge variant="destructive">{t('admin.statusSuspended')}</Badge>;
       case 'Deactivated':
-        return <Badge variant="secondary">Deactivated</Badge>;
+        return <Badge variant="secondary">{t('admin.statusDeactivated')}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -66,9 +68,9 @@ export function PharmaciesApprovalPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Pharmacy Onboarding & Approvals</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('admin.pharmacyApprovals')}</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Review partner pharmacy registrations, verify regulatory licenses, and manage account statuses.
+            {t('admin.pharmacyApprovalsSub')}
           </p>
         </div>
 
@@ -77,37 +79,37 @@ export function PharmaciesApprovalPage() {
           onChange={(e) => setStatusFilter(e.target.value as PharmacyStatus | '')}
           className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
-          <option value="">All Statuses</option>
-          <option value="Pending">Pending Review</option>
-          <option value="Active">Active / Approved</option>
-          <option value="Suspended">Suspended</option>
-          <option value="Deactivated">Deactivated</option>
+          <option value="">{t('admin.allStatuses')}</option>
+          <option value="Pending">{t('admin.statusPending')}</option>
+          <option value="Active">{t('admin.statusActive')}</option>
+          <option value="Suspended">{t('admin.statusSuspended')}</option>
+          <option value="Deactivated">{t('admin.statusDeactivated')}</option>
         </select>
       </div>
 
       {isLoading ? (
         <div className="py-16">
-          <LoadingSpinner size="lg" text="Loading pharmacy applications..." />
+          <LoadingSpinner size="lg" text={language === 'ar' ? 'جارٍ تحميل طلبات الصيدليات...' : 'Loading pharmacy applications...'} />
         </div>
       ) : isError ? (
         <ErrorState error={error} onRetry={() => refetch()} />
       ) : !pharmacies || pharmacies.length === 0 ? (
         <EmptyState
           icon={Building2}
-          title="No Pharmacies Found"
-          description="There are currently no pharmacy records matching your status filter."
+          title={language === 'ar' ? 'لا توجد صيدليات مسجلة' : 'No Pharmacies Found'}
+          description={language === 'ar' ? 'لا توجد صيدليات مطابقة لحالة التصفية المحددة حالياً.' : 'There are currently no pharmacy records matching your status filter.'}
         />
       ) : (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Pharmacy</TableHead>
-                <TableHead>License & City</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead className="text-center">Branches</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Lifecycle Actions</TableHead>
+                <TableHead>{language === 'ar' ? 'الصيدلية' : 'Pharmacy'}</TableHead>
+                <TableHead>{language === 'ar' ? 'الترخيص والمدينة' : 'License & City'}</TableHead>
+                <TableHead>{language === 'ar' ? 'بيانات التواصل' : 'Contact'}</TableHead>
+                <TableHead className="text-center">{language === 'ar' ? 'الفروع' : 'Branches'}</TableHead>
+                <TableHead className="text-center">{language === 'ar' ? 'الحالة' : 'Status'}</TableHead>
+                <TableHead className="text-end">{language === 'ar' ? 'إجراءات الاعتماد' : 'Lifecycle Actions'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -139,7 +141,7 @@ export function PharmaciesApprovalPage() {
                     {getStatusBadge(pharmacy.status)}
                   </TableCell>
 
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-end space-x-1">
                     {pharmacy.status === 'Pending' && (
                       <Button
                         size="sm"
@@ -147,8 +149,8 @@ export function PharmaciesApprovalPage() {
                         onClick={() => approveMutation.mutate(pharmacy.id)}
                         className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white h-7 px-2.5 text-xs"
                       >
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Approve
+                        <CheckCircle2 className="h-3 w-3 me-1" />
+                        {t('admin.approveBtn')}
                       </Button>
                     )}
 
@@ -160,8 +162,8 @@ export function PharmaciesApprovalPage() {
                         onClick={() => suspendMutation.mutate(pharmacy.id)}
                         className="text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-7 px-2.5 text-xs"
                       >
-                        <PauseCircle className="h-3 w-3 mr-1" />
-                        Suspend
+                        <PauseCircle className="h-3 w-3 me-1" />
+                        {t('admin.suspendBtn')}
                       </Button>
                     )}
 
@@ -173,8 +175,8 @@ export function PharmaciesApprovalPage() {
                         onClick={() => reactivateMutation.mutate(pharmacy.id)}
                         className="text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 h-7 px-2.5 text-xs"
                       >
-                        <PlayCircle className="h-3 w-3 mr-1" />
-                        Reactivate
+                        <PlayCircle className="h-3 w-3 me-1" />
+                        {t('admin.reactivateBtn')}
                       </Button>
                     )}
 
@@ -185,7 +187,7 @@ export function PharmaciesApprovalPage() {
                         disabled={deactivateMutation.isPending}
                         onClick={() => deactivateMutation.mutate(pharmacy.id)}
                         className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 h-7 px-2 text-xs"
-                        title="Deactivate"
+                        title={t('admin.deactivateBtn')}
                       >
                         <XCircle className="h-3.5 w-3.5" />
                       </Button>

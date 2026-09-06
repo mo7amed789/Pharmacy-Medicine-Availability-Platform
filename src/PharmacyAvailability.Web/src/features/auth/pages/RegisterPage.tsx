@@ -9,8 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ApiError } from '@/api/apiClient';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { LanguageToggle } from '@/components/common/LanguageToggle';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function RegisterPage() {
+  const { t, language } = useTranslation();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -73,7 +77,7 @@ export function RegisterPage() {
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Failed to create account. Please check your details.');
+        setError(language === 'ar' ? 'تعذر إنشاء الحساب. يرجى مراجعة البيانات.' : 'Failed to create account. Please check your details.');
       }
     } finally {
       setIsLoading(false);
@@ -81,15 +85,20 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="absolute top-4 end-4 flex items-center gap-2">
+        <LanguageToggle />
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
             <Pill className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold text-slate-900">Create your account</CardTitle>
-          <CardDescription className="text-slate-500">
-            Register to reserve medicines at nearby verified pharmacies
+          <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('auth.createAccountTitle')}</CardTitle>
+          <CardDescription className="text-slate-500 dark:text-slate-400">
+            {t('auth.createAccountDesc')}
           </CardDescription>
         </CardHeader>
 
@@ -103,87 +112,87 @@ export function RegisterPage() {
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Full Name</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.fullNameLabel')}</label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <User className="absolute start-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   type="text"
-                  placeholder="Mohamed Ahmed"
+                  placeholder={t('auth.fullNamePlaceholder')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className={`pl-9 ${fieldErrors.fullName ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`ps-9 dark:bg-slate-800 dark:border-slate-700 ${fieldErrors.fullName ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
               {fieldErrors.fullName && (
-                <p className="text-xs text-red-600 mt-1">{fieldErrors.fullName}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{fieldErrors.fullName}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Email Address</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.emailLabel')}</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Mail className="absolute start-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`pl-9 ${fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`ps-9 dark:bg-slate-800 dark:border-slate-700 ${fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
               {fieldErrors.email && (
-                <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{fieldErrors.email}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Phone Number</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.phoneLabel')}</label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Phone className="absolute start-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   type="tel"
-                  placeholder="+20 100 000 0000"
+                  placeholder={t('auth.phonePlaceholder')}
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  className={`pl-9 ${fieldErrors.phoneNumber ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`ps-9 dark:bg-slate-800 dark:border-slate-700 ${fieldErrors.phoneNumber ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
               {fieldErrors.phoneNumber && (
-                <p className="text-xs text-red-600 mt-1">{fieldErrors.phoneNumber}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{fieldErrors.phoneNumber}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Password</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.passwordLabel')}</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Lock className="absolute start-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   type="password"
-                  placeholder="Minimum 8 characters"
+                  placeholder={t('auth.passwordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`pl-9 ${fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`ps-9 dark:bg-slate-800 dark:border-slate-700 ${fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
               {fieldErrors.password && (
-                <p className="text-xs text-red-600 mt-1">{fieldErrors.password}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{fieldErrors.password}</p>
               )}
             </div>
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating Account...' : 'Register Account'}
+              {isLoading ? t('auth.registering') : t('auth.registerBtn')}
             </Button>
 
-            <div className="text-center text-xs text-slate-600">
-              Already have an account?{' '}
+            <div className="text-center text-xs text-slate-600 dark:text-slate-400">
+              {t('auth.haveAccount')}{' '}
               <Link to="/login" className="font-semibold text-blue-600 hover:underline">
-                Sign in
+                {t('nav.signIn')}
               </Link>
             </div>
           </CardFooter>

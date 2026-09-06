@@ -19,6 +19,7 @@ import { useAuthStore } from '@/app/store/authStore';
 import { formatCurrency } from '@/lib/formatters';
 import { ApiError } from '@/api/apiClient';
 import { createReservationSchema, CreateReservationFormData } from '@/lib/validations';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface ReservationDialogProps {
   item: MedicineAvailabilityDto | null;
@@ -99,13 +100,17 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
     }
   };
 
+  const { t, language } = useTranslation();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md dark:bg-slate-900 dark:border-slate-800">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-slate-900">Place Reservation Hold</DialogTitle>
-          <DialogDescription className="text-slate-500">
-            Lock inventory units at the branch for customer pickup.
+          <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            {t('customer.reserveDialogTitle')}
+          </DialogTitle>
+          <DialogDescription className="text-slate-500 dark:text-slate-400">
+            {t('customer.reserveDialogDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -119,23 +124,27 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
             )}
 
             {/* Medicine & Branch Details */}
-            <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 text-sm space-y-2">
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-4 border border-slate-200 dark:border-slate-700 text-sm space-y-2">
               <div>
-                <span className="font-bold text-slate-900 text-base">{item.medicineBrandName}</span>
-                <p className="text-xs text-slate-500">{item.medicineGenericName} • {item.strength} • {item.dosageForm}</p>
+                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{item.medicineBrandName}</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{item.medicineGenericName} • {item.strength} • {item.dosageForm}</p>
               </div>
-              <div className="pt-2 border-t border-slate-200">
-                <p className="font-semibold text-slate-800">{item.pharmacyName} — {item.branchName}</p>
-                <p className="text-xs text-slate-500">{item.branchAddress}, {item.branchCity}</p>
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">{item.pharmacyName} — {item.branchName}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{item.branchAddress}, {item.branchCity}</p>
               </div>
             </div>
 
             {/* Quantity Selector */}
-            <div className="space-y-1 border-y border-slate-200 py-3">
+            <div className="space-y-1 border-y border-slate-200 dark:border-slate-700 py-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-semibold text-slate-800">Reservation Quantity</label>
-                  <p className="text-xs text-slate-500">Available: {item.availableQuantity} units</p>
+                  <label className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    {language === 'ar' ? 'كمية الحجز المطلوبة' : 'Reservation Quantity'}
+                  </label>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {language === 'ar' ? `الكمية المتوفرة: ${item.availableQuantity} وحدة` : `Available: ${item.availableQuantity} units`}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -147,7 +156,7 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
                   >
                     -
                   </Button>
-                  <span className="w-8 text-center font-bold text-slate-900">{quantity}</span>
+                  <span className="w-8 text-center font-bold text-slate-900 dark:text-slate-100">{quantity}</span>
                   <Button
                     type="button"
                     variant="outline"
@@ -166,24 +175,38 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
 
             {/* Pricing & Policy Details */}
             <div className="flex justify-between items-center text-sm font-semibold">
-              <span className="text-slate-600">Total Price:</span>
-              <span className="text-lg font-bold text-blue-700">{formatCurrency(totalCost, item.currency)}</span>
+              <span className="text-slate-600 dark:text-slate-400">
+                {language === 'ar' ? 'السعر الإجمالي:' : 'Total Price:'}
+              </span>
+              <span className="text-lg font-bold text-blue-700 dark:text-blue-400">{formatCurrency(totalCost, item.currency)}</span>
             </div>
 
-            <div className="flex items-start gap-2 rounded-md bg-blue-50/70 p-3 text-xs text-blue-900 border border-blue-100">
-              <Clock className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 rounded-md bg-blue-50/70 dark:bg-blue-950/40 p-3 text-xs text-blue-900 dark:text-blue-200 border border-blue-100 dark:border-blue-900/60">
+              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <span>
-                Reservations are held for <strong>60 minutes (1 hour)</strong>. Stock will be automatically released back into inventory if not picked up before expiration.
+                {language === 'ar' ? (
+                  <>
+                    يتم حجز الدواء باسمك لمدة <strong>60 دقيقة (ساعة واحدة)</strong>. وسيتم إعادة الكمية للمخزون تلقائياً في حال عدم الاستلام قبل انتهاء المهلة.
+                  </>
+                ) : (
+                  <>
+                    Reservations are held for <strong>60 minutes (1 hour)</strong>. Stock will be automatically released back into inventory if not picked up before expiration.
+                  </>
+                )}
               </span>
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting || item.availableQuantity <= 0}>
-              {isSubmitting ? 'Reserving...' : isAuthenticated ? 'Confirm Hold' : 'Sign In & Reserve'}
+              {isSubmitting
+                ? (language === 'ar' ? 'جارٍ تأكيد الحجز...' : 'Reserving...')
+                : isAuthenticated
+                ? (language === 'ar' ? 'تأكيد الحجز فوراً' : 'Confirm Hold')
+                : (language === 'ar' ? 'تسجيل الدخول وتأكيد الحجز' : 'Sign In & Reserve')}
             </Button>
           </DialogFooter>
         </form>

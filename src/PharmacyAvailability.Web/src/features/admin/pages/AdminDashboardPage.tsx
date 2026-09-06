@@ -4,8 +4,11 @@ import { Building2, BookOpen, Clock, ShieldCheck, ArrowRight } from 'lucide-reac
 import { adminApi } from '../api/adminApi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function AdminDashboardPage() {
+  const { t, language } = useTranslation();
+
   const { data: pharmacies } = useQuery({
     queryKey: ['admin-pharmacies'],
     queryFn: () => adminApi.getAllPharmacies(),
@@ -22,9 +25,9 @@ export function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Platform Superuser Overview</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('admin.superuserTitle')}</h1>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Central governance for partner pharmacy approvals, unified medicine catalog, and system reservation releases.
+          {t('admin.superuserSubtitle')}
         </p>
       </div>
 
@@ -33,11 +36,11 @@ export function AdminDashboardPage() {
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pending Pharmacy Approvals</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('admin.pendingApprovals')}</p>
               <h3 className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{pendingCount}</h3>
               <Button variant="link" size="sm" asChild className="p-0 h-auto mt-2 text-xs">
                 <Link to="/admin/pharmacies" className="flex items-center gap-1">
-                  Review Applications <ArrowRight className="h-3 w-3" />
+                  {t('admin.reviewApplications')} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
                 </Link>
               </Button>
             </div>
@@ -50,11 +53,11 @@ export function AdminDashboardPage() {
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Partner Pharmacies</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('admin.activePharmacies')}</p>
               <h3 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{approvedCount}</h3>
               <Button variant="link" size="sm" asChild className="p-0 h-auto mt-2 text-xs">
                 <Link to="/admin/pharmacies" className="flex items-center gap-1">
-                  View All Partners <ArrowRight className="h-3 w-3" />
+                  {t('admin.viewAllPartners')} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
                 </Link>
               </Button>
             </div>
@@ -67,13 +70,13 @@ export function AdminDashboardPage() {
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total System Holds</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('admin.totalSystemHolds')}</p>
               <h3 className="text-3xl font-extrabold text-purple-700 dark:text-purple-400 mt-1">
                 {reservations?.totalCount ?? 0}
               </h3>
               <Button variant="link" size="sm" asChild className="p-0 h-auto mt-2 text-xs">
                 <Link to="/admin/reservations" className="flex items-center gap-1">
-                  Audit Holds <ArrowRight className="h-3 w-3" />
+                  {t('admin.auditHolds')} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
                 </Link>
               </Button>
             </div>
@@ -93,15 +96,17 @@ export function AdminDashboardPage() {
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">Central Catalog Management</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Standardize medicine brands, generics, categories, and barcodes.</p>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{t('admin.centralCatalog')}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('admin.centralCatalogSub')}</p>
               </div>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Create and edit authoritative medicine records used by all pharmacies when synchronizing inventory.
+              {language === 'ar'
+                ? 'إنشاء وتعديل سجلات الأدوية المعتمدة التي تعتمد عليها جميع الصيدليات عند مزامنة المخزون وتحديد الأسعار.'
+                : 'Create and edit authoritative medicine records used by all pharmacies when synchronizing inventory.'}
             </p>
             <Button size="sm" asChild>
-              <Link to="/admin/catalog">Open Catalog Studio</Link>
+              <Link to="/admin/catalog">{t('admin.openCatalog')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -113,15 +118,17 @@ export function AdminDashboardPage() {
                 <Clock className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">System Reservation Oversight</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Audit system holds and perform administrative releases.</p>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{t('admin.reservationsOversight')}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('admin.reservationsOversightSub')}</p>
               </div>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              In case of pharmacy outages or customer disputes, platform administrators can forcibly release reserved stock back to inventory.
+              {language === 'ar'
+                ? 'في حالات انقطاع الخدمة أو بلاغات العملاء، يمتلك مسؤولو النظام صلاحية التدقيق وإلغاء الحجوزات وإعادة المخزون فورياً.'
+                : 'In case of pharmacy outages or customer disputes, platform administrators can forcibly release reserved stock back to inventory.'}
             </p>
             <Button size="sm" variant="outline" asChild>
-              <Link to="/admin/reservations">Inspect System Holds</Link>
+              <Link to="/admin/reservations">{t('admin.inspectHolds')}</Link>
             </Button>
           </CardContent>
         </Card>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency, formatDistance, formatRelativeTime } from '@/lib/formatters';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface AvailabilityCardProps {
   item: MedicineAvailabilityDto;
@@ -11,10 +12,11 @@ interface AvailabilityCardProps {
 }
 
 export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
+  const { language } = useTranslation();
   const isAvailable = item.availableQuantity > 0;
 
   return (
-    <Card className="overflow-hidden border-slate-200 transition-all hover:shadow-md">
+    <Card className="overflow-hidden border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all hover:shadow-md">
       <CardContent className="p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Main Info */}
@@ -22,18 +24,20 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{item.medicineBrandName}</h3>
               <Badge variant={isAvailable ? 'success' : 'destructive'} className="text-xs">
-                {isAvailable ? `${item.availableQuantity} in stock` : 'Out of Stock'}
+                {isAvailable
+                  ? (language === 'ar' ? `متوفر (${item.availableQuantity} وحدة)` : `${item.availableQuantity} in stock`)
+                  : (language === 'ar' ? 'غير متوفر' : 'Out of Stock')}
               </Badge>
               {item.freshness === 'Realtime' && (
                 <Badge variant="outline" className="text-[10px] text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/40 flex items-center gap-1">
                   <Sparkles className="h-3 w-3" />
-                  Live Freshness
+                  {language === 'ar' ? 'تحديث لحظي' : 'Live Freshness'}
                 </Badge>
               )}
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Generic: <span className="text-slate-700 dark:text-slate-300">{item.medicineGenericName}</span> • Form: {item.dosageForm} • Strength: {item.strength}
+              {language === 'ar' ? 'المادة الفعالة:' : 'Generic:'} <span className="text-slate-700 dark:text-slate-300">{item.medicineGenericName}</span> • {language === 'ar' ? 'الشكل:' : 'Form:'} {item.dosageForm} • {language === 'ar' ? 'التركيز:' : 'Strength:'} {item.strength}
             </p>
 
             {/* Branch and Location */}
@@ -57,7 +61,7 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
               {item.openingHours && (
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  <span>Hours: {item.openingHours}</span>
+                  <span>{language === 'ar' ? 'ساعات العمل:' : 'Hours:'} {item.openingHours}</span>
                 </div>
               )}
               {item.branchPhone && (
@@ -66,17 +70,19 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
                   <span>{item.branchPhone}</span>
                 </div>
               )}
-              <span>Updated {formatRelativeTime(item.lastUpdatedAt)}</span>
+              <span>{language === 'ar' ? 'تم التحديث منذ' : 'Updated'} {formatRelativeTime(item.lastUpdatedAt)}</span>
             </div>
           </div>
 
           {/* Pricing & Reservation CTA */}
-          <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-3 md:pt-0 md:pl-6 gap-3">
-            <div className="text-left md:text-right">
+          <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-s border-slate-100 dark:border-slate-800 pt-3 md:pt-0 md:ps-6 gap-3">
+            <div className="text-start md:text-end">
               <div className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {formatCurrency(item.price, item.currency)}
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">per unit</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {language === 'ar' ? 'لكل عبوة' : 'per unit'}
+              </p>
             </div>
 
             <Button
@@ -85,7 +91,9 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
               onClick={() => onReserve(item)}
               className="px-5 shadow-xs"
             >
-              {isAvailable ? 'Reserve Hold' : 'Unavailable'}
+              {isAvailable
+                ? (language === 'ar' ? 'حجز واستلام' : 'Reserve Hold')
+                : (language === 'ar' ? 'غير متوفر' : 'Unavailable')}
             </Button>
           </div>
         </div>

@@ -30,8 +30,10 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { formatDateTime } from '@/lib/formatters';
 import { ApiError } from '@/api/apiClient';
 import { inviteStaffSchema, InviteStaffFormData } from '@/lib/validations';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function StaffManagementPage() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const pharmacyId = user?.pharmacyId;
@@ -96,9 +98,9 @@ export function StaffManagementPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Pharmacy Staff Management</h1>
-          <p className="text-xs text-slate-500">
-            Manage operational pharmacists and branch staff team members.
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('pharmacy.staffTeamTitle')}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('pharmacy.staffTeamDesc')}
           </p>
         </div>
         <Button
@@ -110,51 +112,51 @@ export function StaffManagementPage() {
           className="flex items-center gap-1.5 text-xs"
         >
           <UserPlus className="h-4 w-4" />
-          Add Staff Member
+          {t('pharmacy.addStaff')}
         </Button>
       </div>
 
       {isLoading ? (
         <div className="py-16">
-          <LoadingSpinner size="lg" text="Loading staff members..." />
+          <LoadingSpinner size="lg" text={t('common.loading')} />
         </div>
       ) : isError ? (
         <ErrorState error={error} onRetry={() => refetch()} />
       ) : !staff || staff.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No Staff Accounts Found"
-          description="No additional staff members have been registered for this pharmacy."
-          actionLabel="Add First Staff"
+          title={t('pharmacy.noStaff')}
+          description={t('pharmacy.staffTeamDesc')}
+          actionLabel={t('pharmacy.addStaff')}
           onAction={() => setIsInviteOpen(true)}
         />
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Staff Member</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Joined</TableHead>
+                <TableHead>{t('pharmacy.staffMember')}</TableHead>
+                <TableHead>{t('common.role')}</TableHead>
+                <TableHead>{t('common.phone')}</TableHead>
+                <TableHead className="text-center">{t('common.status')}</TableHead>
+                <TableHead className="text-end">{t('pharmacy.staffJoined')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {staff.map((member: PharmacyStaffDto) => (
                 <TableRow key={member.id}>
                   <TableCell>
-                    <div className="font-bold text-slate-900">{member.fullName}</div>
-                    <div className="text-xs text-slate-500">{member.email}</div>
+                    <div className="font-bold text-slate-900 dark:text-slate-100">{member.fullName}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{member.email}</div>
                   </TableCell>
 
                   <TableCell>
                     <Badge variant={member.role === 'PharmacyAdmin' ? 'default' : 'secondary'}>
-                      {member.role}
+                      {member.role === 'PharmacyAdmin' ? t('nav.roles.PharmacyAdmin') : t('nav.roles.PharmacyStaff')}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-600">
+                  <TableCell className="text-xs text-slate-600 dark:text-slate-300">
                     {member.phoneNumber ? (
                       <div className="flex items-center gap-1">
                         <Phone className="h-3 w-3 text-slate-400" />
@@ -167,11 +169,11 @@ export function StaffManagementPage() {
 
                   <TableCell className="text-center">
                     <Badge variant={member.isActive ? 'success' : 'destructive'} className="text-[10px]">
-                      {member.isActive ? 'Active' : 'Inactive'}
+                      {member.isActive ? t('common.active') : t('common.inactive')}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-right text-xs text-slate-400">
+                  <TableCell className="text-end text-xs text-slate-400">
                     {formatDateTime(member.createdAt)}
                   </TableCell>
                 </TableRow>
@@ -185,83 +187,87 @@ export function StaffManagementPage() {
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Add Staff Member</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('pharmacy.addStaff')}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onInviteSubmit)} className="space-y-4 py-2">
             {inviteError && (
-              <div className="rounded-md bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+              <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50">
                 {inviteError}
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">Full Name</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.fullNameLabel')}</label>
               <Input
                 {...register('fullName')}
-                placeholder="Dr. Ahmed Hassan"
+                placeholder={t('auth.fullNamePlaceholder')}
+                className="dark:bg-slate-800 dark:border-slate-700"
               />
               {errors.fullName && (
-                <p className="text-xs text-red-600 font-medium">{errors.fullName.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errors.fullName.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">Email Address</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.emailLabel')}</label>
               <Input
                 type="email"
                 {...register('email')}
-                placeholder="ahmed@pharmacy.com"
+                placeholder={t('auth.emailPlaceholder')}
+                className="dark:bg-slate-800 dark:border-slate-700"
               />
               {errors.email && (
-                <p className="text-xs text-red-600 font-medium">{errors.email.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errors.email.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">Initial Password</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('pharmacy.initialPassword')}</label>
               <Input
                 type="password"
                 {...register('password')}
-                placeholder="Minimum 8 characters"
+                placeholder={t('auth.passwordPlaceholder')}
+                className="dark:bg-slate-800 dark:border-slate-700"
               />
               {errors.password && (
-                <p className="text-xs text-red-600 font-medium">{errors.password.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errors.password.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">Phone Number</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('auth.phoneLabel')}</label>
               <Input
                 type="tel"
                 {...register('phoneNumber')}
-                placeholder="+201000000000"
+                placeholder={t('auth.phonePlaceholder')}
+                className="dark:bg-slate-800 dark:border-slate-700"
               />
               {errors.phoneNumber && (
-                <p className="text-xs text-red-600 font-medium">{errors.phoneNumber.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errors.phoneNumber.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700">Role</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('common.role')}</label>
               <select
                 {...register('role')}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-800"
+                className="h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200"
               >
-                <option value="PharmacyStaff">PharmacyStaff (Fulfillment & Queue)</option>
-                <option value="PharmacyAdmin">PharmacyAdmin (Full Branch & Stock Control)</option>
+                <option value="PharmacyStaff">{t('nav.roles.PharmacyStaff')}</option>
+                <option value="PharmacyAdmin">{t('nav.roles.PharmacyAdmin')}</option>
               </select>
               {errors.role && (
-                <p className="text-xs text-red-600 font-medium">{errors.role.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errors.role.message}</p>
               )}
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsInviteOpen(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Adding...' : 'Create Account'}
+                {isSubmitting ? t('common.loading') : t('pharmacy.createAccountBtn')}
               </Button>
             </DialogFooter>
           </form>

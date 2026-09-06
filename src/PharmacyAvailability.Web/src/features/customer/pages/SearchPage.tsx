@@ -11,11 +11,13 @@ import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/i18n/useTranslation';
 
 // Cairo Downtown coordinates for quick 1-click testing
 const CAIRO_DEMO_COORDS = { latitude: 30.0444, longitude: 31.2357 };
 
 export function SearchPage() {
+  const { t, language } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState('distance');
@@ -39,7 +41,7 @@ export function SearchPage() {
 
   const handleRequestLocation = () => {
     if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser.');
+      setLocationError(language === 'ar' ? 'متصفحك لا يدعم خدمة تحديد الموقع الجغرافي.' : 'Geolocation is not supported by your browser.');
       return;
     }
 
@@ -55,7 +57,7 @@ export function SearchPage() {
         setIsLocating(false);
       },
       (error) => {
-        setLocationError(`Location request failed: ${error.message}`);
+        setLocationError(language === 'ar' ? `تعذر تحديد موقعك: ${error.message}` : `Location request failed: ${error.message}`);
         setCoords(null);
         setIsLocating(false);
       },
@@ -93,7 +95,11 @@ export function SearchPage() {
   };
 
   const handleReservationSuccess = () => {
-    setSuccessNotice(`Hold placed successfully! Your order is reserved for 60 minutes (1 hour).`);
+    setSuccessNotice(
+      language === 'ar'
+        ? 'تم تأكيد حجز الدواء بنجاح! طلبك محجوز في الصيدلية لمدة 60 دقيقة (ساعة واحدة).'
+        : 'Hold placed successfully! Your order is reserved for 60 minutes (1 hour).'
+    );
     refetch();
     setTimeout(() => setSuccessNotice(null), 6000);
   };
@@ -103,10 +109,10 @@ export function SearchPage() {
       {/* Banner / Hero */}
       <div className="mb-6 space-y-1">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-          Find Medicine Availability Nearby
+          {t('customer.heroTitle')}
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Locate verified pharmacy stock, compare prices, and place hold reservations instantly.
+          {t('customer.heroSubtitle')}
         </p>
       </div>
 
@@ -121,10 +127,12 @@ export function SearchPage() {
       {locationError && (
         <Alert variant="warning" className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5">
           <div className="flex-1">
-            <AlertDescription className="text-xs font-medium text-amber-900">
+            <AlertDescription className="text-xs font-medium text-amber-900 dark:text-amber-300">
               {locationError}
-              <span className="block mt-0.5 text-amber-700 font-normal">
-                Don't worry — you can browse nationwide or use the Cairo Demo GPS coordinates to test nearby availability.
+              <span className="block mt-0.5 text-amber-700 dark:text-amber-400 font-normal">
+                {language === 'ar'
+                  ? 'يمكنك التصفح على مستوى الجمهورية أو تجربة إحداثيات القاهرة للتأكد من الميزات التفاعلية.'
+                  : "Don't worry — you can browse nationwide or use the Cairo Demo GPS coordinates to test nearby availability."}
               </span>
             </AlertDescription>
           </div>
@@ -133,20 +141,20 @@ export function SearchPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 text-xs bg-white text-slate-800 border-amber-300 hover:bg-amber-50"
+              className="h-8 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-amber-300 hover:bg-amber-50"
               onClick={handleUseDemoLocation}
             >
-              <MapPin className="h-3 w-3 mr-1 text-blue-600" />
-              Use Cairo Demo GPS
+              <MapPin className="h-3 w-3 me-1 text-blue-600" />
+              {t('customer.cairoDemoGps')}
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 text-xs text-amber-900 hover:bg-amber-100/50"
+              className="h-8 text-xs text-amber-900 dark:text-amber-300 hover:bg-amber-100/50"
               onClick={() => setLocationError(null)}
             >
-              Dismiss
+              {language === 'ar' ? 'تجاهل' : 'Dismiss'}
             </Button>
           </div>
         </Alert>
@@ -171,7 +179,7 @@ export function SearchPage() {
       <div className="mt-8 space-y-4">
         {isLoading ? (
           <div className="py-16">
-            <LoadingSpinner size="lg" text="Searching medicine availability across pharmacies..." />
+            <LoadingSpinner size="lg" text={language === 'ar' ? 'جارٍ البحث عن توفر الأدوية في الصيدليات...' : 'Searching medicine availability across pharmacies...'} />
           </div>
         ) : isError ? (
           <ErrorState error={error} onRetry={() => refetch()} />
@@ -179,13 +187,17 @@ export function SearchPage() {
           <div className="space-y-4">
             <EmptyState
               icon={SearchX}
-              title="No Medicine Inventory Found"
+              title={language === 'ar' ? 'لم يتم العثور على أدوية متوفرة' : 'No Medicine Inventory Found'}
               description={
                 coords
-                  ? `No active pharmacy inventory matched "${searchTerm || 'all medicines'}" within ${radiusKm}km of your current location. Cairo branches may be outside this radius.`
-                  : `No active pharmacy inventory matched "${searchTerm}". Try choosing one of the popular test medicines or clear your search to see all available inventory.`
+                  ? (language === 'ar'
+                      ? `لم نجد أدوية متوفرة مطابقة لـ "${searchTerm || 'جميع الأدوية'}" في نطاق ${radiusKm} كم من موقعك الحالي.`
+                      : `No active pharmacy inventory matched "${searchTerm || 'all medicines'}" within ${radiusKm}km of your current location. Cairo branches may be outside this radius.`)
+                  : (language === 'ar'
+                      ? `لم نجد نتائج مطابقة لـ "${searchTerm}". جرب اختيار أحد الأدوية المقترحة أو مسح البحث لعرض جميع الأدوية.`
+                      : `No active pharmacy inventory matched "${searchTerm}". Try choosing one of the popular test medicines or clear your search to see all available inventory.`)
               }
-              actionLabel={coords ? "Switch to Cairo Demo GPS" : "Reset & Show All"}
+              actionLabel={coords ? (language === 'ar' ? 'التبديل إلى موقع القاهرة (Demo)' : 'Switch to Cairo Demo GPS') : (language === 'ar' ? 'عرض جميع الأدوية' : 'Reset & Show All')}
               onAction={() => {
                 if (coords) {
                   handleUseDemoLocation();
@@ -205,8 +217,8 @@ export function SearchPage() {
                   onClick={handleClearLocation}
                   className="text-xs"
                 >
-                  <Globe className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
-                  Show Nationwide (Disable GPS Filter)
+                  <Globe className="h-3.5 w-3.5 me-1.5 text-slate-500" />
+                  {language === 'ar' ? 'عرض على مستوى الجمهورية (دون تقييد بالموقع)' : 'Show Nationwide (Disable GPS Filter)'}
                 </Button>
               </div>
             )}
@@ -214,8 +226,12 @@ export function SearchPage() {
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold px-1">
-              <span>Found {data.totalCount} available medicine offerings</span>
-              <span>Page {data.page} of {data.totalPages}</span>
+              <span>
+                {language === 'ar' ? `تم العثور على ${data.totalCount} صيدلية يتوفر بها الدواء` : `Found ${data.totalCount} available medicine offerings`}
+              </span>
+              <span>
+                {language === 'ar' ? `صفحة ${data.page} من ${data.totalPages}` : `Page ${data.page} of ${data.totalPages}`}
+              </span>
             </div>
 
             <div className="grid grid-cols-1 gap-4">

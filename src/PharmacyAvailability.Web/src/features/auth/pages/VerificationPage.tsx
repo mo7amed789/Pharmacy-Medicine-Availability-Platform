@@ -9,10 +9,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ApiError } from '@/api/apiClient';
-
 import { verifyCodeSchema } from '@/lib/validations';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { LanguageToggle } from '@/components/common/LanguageToggle';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function VerificationPage() {
+  const { t, language } = useTranslation();
   const { user, setUser, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -68,7 +71,7 @@ export function VerificationPage() {
 
     const validation = verifyCodeSchema.safeParse({ type: 'Email', code: emailCode.trim() });
     if (!validation.success) {
-      setEmailError(validation.error.issues[0]?.message || 'Invalid verification code.');
+      setEmailError(validation.error.issues[0]?.message || (language === 'ar' ? 'رمز التحقق غير صالح.' : 'Invalid verification code.'));
       return;
     }
 
@@ -79,7 +82,7 @@ export function VerificationPage() {
       if (user) {
         setUser({ ...user, isEmailVerified: res.isEmailVerified, isPhoneVerified: res.isPhoneVerified });
       }
-      setEmailSuccess('Email verified successfully!');
+      setEmailSuccess(t('auth.emailVerified'));
       setEmailCode('');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -87,7 +90,7 @@ export function VerificationPage() {
       } else if (err instanceof Error) {
         setEmailError(err.message);
       } else {
-        setEmailError('Failed to verify email code.');
+        setEmailError(language === 'ar' ? 'فشل التحقق من رمز البريد.' : 'Failed to verify email code.');
       }
     } finally {
       setEmailLoading(false);
@@ -101,7 +104,7 @@ export function VerificationPage() {
 
     const validation = verifyCodeSchema.safeParse({ type: 'Phone', code: phoneCode.trim() });
     if (!validation.success) {
-      setPhoneError(validation.error.issues[0]?.message || 'Invalid verification code.');
+      setPhoneError(validation.error.issues[0]?.message || (language === 'ar' ? 'رمز التحقق غير صالح.' : 'Invalid verification code.'));
       return;
     }
 
@@ -112,7 +115,7 @@ export function VerificationPage() {
       if (user) {
         setUser({ ...user, isEmailVerified: res.isEmailVerified, isPhoneVerified: res.isPhoneVerified });
       }
-      setPhoneSuccess('Phone number verified successfully!');
+      setPhoneSuccess(t('auth.phoneVerified'));
       setPhoneCode('');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -120,7 +123,7 @@ export function VerificationPage() {
       } else if (err instanceof Error) {
         setPhoneError(err.message);
       } else {
-        setPhoneError('Failed to verify phone code.');
+        setPhoneError(language === 'ar' ? 'فشل التحقق من رمز الهاتف.' : 'Failed to verify phone code.');
       }
     } finally {
       setPhoneLoading(false);
@@ -135,7 +138,7 @@ export function VerificationPage() {
 
     try {
       await authApi.resendCode({ type: 'Email' });
-      setEmailSuccess('New verification code sent to your email.');
+      setEmailSuccess(language === 'ar' ? 'تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني.' : 'New verification code sent to your email.');
       setEmailCooldown(60);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -143,7 +146,7 @@ export function VerificationPage() {
       } else if (err instanceof Error) {
         setEmailError(err.message);
       } else {
-        setEmailError('Failed to resend code.');
+        setEmailError(language === 'ar' ? 'فشل إعادة إرسال الرمز.' : 'Failed to resend code.');
       }
     } finally {
       setResendEmailLoading(false);
@@ -158,7 +161,7 @@ export function VerificationPage() {
 
     try {
       await authApi.resendCode({ type: 'Phone' });
-      setPhoneSuccess('New verification code sent via SMS.');
+      setPhoneSuccess(language === 'ar' ? 'تم إرسال رمز تحقق جديد عبر رسالة SMS.' : 'New verification code sent via SMS.');
       setPhoneCooldown(60);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -166,7 +169,7 @@ export function VerificationPage() {
       } else if (err instanceof Error) {
         setPhoneError(err.message);
       } else {
-        setPhoneError('Failed to resend code.');
+        setPhoneError(language === 'ar' ? 'فشل إعادة إرسال الرمز.' : 'Failed to resend code.');
       }
     } finally {
       setResendPhoneLoading(false);
@@ -174,41 +177,46 @@ export function VerificationPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-xl shadow-lg border-slate-200">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="absolute top-4 end-4 flex items-center gap-2">
+        <LanguageToggle />
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-xl shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md">
             <ShieldCheck className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl font-bold text-slate-900">Verify Your Identity</CardTitle>
-          <CardDescription className="text-slate-500">
-            Please verify both your email and phone number to activate your account.
+          <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('auth.verifyIdentityTitle')}</CardTitle>
+          <CardDescription className="text-slate-500 dark:text-slate-400">
+            {t('auth.verifyIdentityDesc')}
           </CardDescription>
-          <div className="mt-2 text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-200 text-left">
-            <span className="font-semibold">Developer Tip:</span> In development mode, verification OTP codes are logged directly to the backend API console terminal.
+          <div className="mt-2 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/50 text-start">
+            <span className="font-semibold">{t('auth.devTip')}</span>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {/* Email Verification Section */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
                   <Mail className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">Email Address</h4>
-                  <p className="text-xs text-slate-500">{user?.email}</p>
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('auth.emailLabel')}</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
                 </div>
               </div>
               {user?.isEmailVerified ? (
                 <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {t('common.confirmed')}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
-                  Pending
+                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/40">
+                  {t('common.pending')}
                 </Badge>
               )}
             </div>
@@ -221,8 +229,8 @@ export function VerificationPage() {
             )}
 
             {emailSuccess && (
-              <Alert className="py-2 border-emerald-300 bg-emerald-50 text-emerald-800">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <Alert className="py-2 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <AlertDescription className="text-xs">{emailSuccess}</AlertDescription>
               </Alert>
             )}
@@ -231,16 +239,16 @@ export function VerificationPage() {
               <form onSubmit={handleVerifyEmail} className="flex flex-col sm:flex-row gap-2 pt-1">
                 <Input
                   type="text"
-                  placeholder="Enter 6-digit email code"
+                  placeholder={t('auth.enterEmailCode')}
                   value={emailCode}
                   onChange={(e) => setEmailCode(e.target.value)}
                   maxLength={6}
-                  className="flex-1 tracking-widest font-mono text-center sm:text-left"
+                  className="flex-1 tracking-widest font-mono text-center sm:text-start dark:bg-slate-800 dark:border-slate-700"
                   required
                 />
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={emailLoading || !emailCode}>
-                    {emailLoading ? 'Verifying...' : 'Verify'}
+                    {emailLoading ? t('common.loading') : t('common.submit')}
                   </Button>
                   <Button
                     type="button"
@@ -252,9 +260,9 @@ export function VerificationPage() {
                     {resendEmailLoading ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : emailCooldown > 0 ? (
-                      `Resend (${emailCooldown}s)`
+                      t('auth.resendCountdown', { seconds: emailCooldown })
                     ) : (
-                      'Resend Code'
+                      t('auth.resendCode')
                     )}
                   </Button>
                 </div>
@@ -263,24 +271,24 @@ export function VerificationPage() {
           </div>
 
           {/* Phone Verification Section */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
                   <Phone className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-900">Phone Number</h4>
-                  <p className="text-xs text-slate-500">{user?.phoneNumber}</p>
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('auth.phoneLabel')}</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{user?.phoneNumber}</p>
                 </div>
               </div>
               {user?.isPhoneVerified ? (
                 <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {t('common.confirmed')}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
-                  Pending
+                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/40">
+                  {t('common.pending')}
                 </Badge>
               )}
             </div>
@@ -293,8 +301,8 @@ export function VerificationPage() {
             )}
 
             {phoneSuccess && (
-              <Alert className="py-2 border-emerald-300 bg-emerald-50 text-emerald-800">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <Alert className="py-2 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <AlertDescription className="text-xs">{phoneSuccess}</AlertDescription>
               </Alert>
             )}
@@ -303,16 +311,16 @@ export function VerificationPage() {
               <form onSubmit={handleVerifyPhone} className="flex flex-col sm:flex-row gap-2 pt-1">
                 <Input
                   type="text"
-                  placeholder="Enter 6-digit phone code"
+                  placeholder={t('auth.enterPhoneCode')}
                   value={phoneCode}
                   onChange={(e) => setPhoneCode(e.target.value)}
                   maxLength={6}
-                  className="flex-1 tracking-widest font-mono text-center sm:text-left"
+                  className="flex-1 tracking-widest font-mono text-center sm:text-start dark:bg-slate-800 dark:border-slate-700"
                   required
                 />
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" disabled={phoneLoading || !phoneCode}>
-                    {phoneLoading ? 'Verifying...' : 'Verify'}
+                    {phoneLoading ? t('common.loading') : t('common.submit')}
                   </Button>
                   <Button
                     type="button"
@@ -324,9 +332,9 @@ export function VerificationPage() {
                     {resendPhoneLoading ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : phoneCooldown > 0 ? (
-                      `Resend (${phoneCooldown}s)`
+                      t('auth.resendCountdown', { seconds: phoneCooldown })
                     ) : (
-                      'Resend Code'
+                      t('auth.resendCode')
                     )}
                   </Button>
                 </div>
@@ -335,7 +343,7 @@ export function VerificationPage() {
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-between items-center border-t border-slate-100 pt-4">
+        <CardFooter className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-4">
           <Button
             type="button"
             variant="ghost"
@@ -344,9 +352,9 @@ export function VerificationPage() {
               logout();
               navigate('/login', { replace: true });
             }}
-            className="text-slate-500 hover:text-slate-800 gap-1.5"
+            className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 gap-1.5"
           >
-            <LogOut className="h-4 w-4" /> Sign Out
+            <LogOut className="h-4 w-4" /> {t('nav.signOut')}
           </Button>
 
           {user?.isEmailVerified && user?.isPhoneVerified && (
@@ -355,7 +363,7 @@ export function VerificationPage() {
               onClick={() => navigate('/customer/search', { replace: true })}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              Continue to App
+              {t('auth.continueToApp')}
             </Button>
           )}
         </CardFooter>

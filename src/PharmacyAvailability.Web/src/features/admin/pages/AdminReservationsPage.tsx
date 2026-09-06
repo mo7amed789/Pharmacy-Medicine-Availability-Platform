@@ -33,8 +33,10 @@ import {
   adminReleaseReservationSchema,
   AdminReleaseReservationFormData,
 } from '@/lib/validations';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function AdminReservationsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -50,9 +52,9 @@ export function AdminReservationsPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">System Reservations Oversight</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('admin.oversightTitle')}</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Platform-wide audit of medicine hold reservations and emergency administrative releases.
+            {t('admin.oversightDesc')}
           </p>
         </div>
 
@@ -62,44 +64,44 @@ export function AdminReservationsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
-            <option value="">All Statuses</option>
-            <option value="Active">Active Holds</option>
-            <option value="Confirmed">Confirmed Pickups</option>
-            <option value="Expired">Expired</option>
-            <option value="Released">Admin Released</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="">{t('admin.allStatuses')}</option>
+            <option value="Active">{t('reservations.activeHolds')}</option>
+            <option value="Confirmed">{t('reservations.confirmedPickups')}</option>
+            <option value="Expired">{t('reservations.expiredHolds')}</option>
+            <option value="Released">{t('reservations.releasedHolds')}</option>
+            <option value="Cancelled">{t('reservations.cancelledHolds')}</option>
           </select>
 
           <Button size="sm" variant="outline" onClick={() => refetch()} className="text-xs">
-            Refresh
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
 
       {isLoading ? (
         <div className="py-16">
-          <LoadingSpinner size="lg" text="Auditing system reservations..." />
+          <LoadingSpinner size="lg" text={t('common.loading')} />
         </div>
       ) : isError ? (
         <ErrorState error={error} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Clock}
-          title="No Reservations Recorded"
-          description="There are currently no platform reservations matching your criteria."
+          title={t('reservations.emptyTitle')}
+          description={t('reservations.emptyDesc')}
         />
       ) : (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Reservation / Customer</TableHead>
-                <TableHead>Medicine</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead className="text-center">Units</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead>Timing</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{t('reservations.pickupCode')} / {t('pharmacy.customerName')}</TableHead>
+                <TableHead>{t('reservations.medicine')}</TableHead>
+                <TableHead>{t('reservations.pharmacy')}</TableHead>
+                <TableHead className="text-center">{t('common.quantity')}</TableHead>
+                <TableHead className="text-center">{t('common.status')}</TableHead>
+                <TableHead>{t('common.time')}</TableHead>
+                <TableHead className="text-end">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -107,7 +109,7 @@ export function AdminReservationsPage() {
                 <TableRow key={res.id}>
                   <TableCell>
                     <div className="font-mono text-xs text-slate-500 dark:text-slate-400">{res.id.slice(0, 8)}...</div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Customer: {res.customerId.slice(0, 8)}...</div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs">{t('nav.roles.Customer')}: {res.customerId.slice(0, 8)}...</div>
                   </TableCell>
 
                   <TableCell>
@@ -138,16 +140,24 @@ export function AdminReservationsPage() {
                           : 'secondary'
                       }
                     >
-                      {res.status}
+                      {res.status === 'Active'
+                        ? t('reservations.activeHolds')
+                        : res.status === 'Confirmed'
+                        ? t('reservations.confirmedPickups')
+                        : res.status === 'Released'
+                        ? t('reservations.releasedHolds')
+                        : res.status === 'Expired'
+                        ? t('reservations.expiredHolds')
+                        : t('reservations.cancelledHolds')}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-500">
-                    <div>Created: {formatDateTime(res.createdAt)}</div>
-                    <div className="text-[11px] text-slate-400">Expires: {formatDateTime(res.expiresAt)}</div>
+                  <TableCell className="text-xs text-slate-500 dark:text-slate-400">
+                    <div>{t('reservations.createdAt')} {formatDateTime(res.createdAt)}</div>
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500">{t('reservations.expiresAt')} {formatDateTime(res.expiresAt)}</div>
                   </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     {res.status === 'Active' && (
                       <Button
                         size="sm"
@@ -155,7 +165,7 @@ export function AdminReservationsPage() {
                         className="h-7 px-2 text-xs"
                         onClick={() => setReleaseItem(res)}
                       >
-                        Force Release
+                        {t('admin.forceReleaseBtn')}
                       </Button>
                     )}
                   </TableCell>
@@ -185,6 +195,7 @@ interface ReleaseReservationDialogProps {
 }
 
 function ReleaseReservationDialog({ item, onClose, onSuccess }: ReleaseReservationDialogProps) {
+  const { t } = useTranslation();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -237,46 +248,47 @@ function ReleaseReservationDialog({ item, onClose, onSuccess }: ReleaseReservati
     <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-slate-900">Administrative Reservation Release</DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
-            Forcibly release reserved stock back into available inventory with an audit log reason.
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('admin.releaseDialogTitle')}</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+            {t('admin.releaseDialogDesc')}
           </DialogDescription>
         </DialogHeader>
 
         {item && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2 text-xs">
             {serverError && (
-              <div className="rounded-md bg-red-50 p-2 text-red-700 border border-red-200">
+              <div className="rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50">
                 {serverError}
               </div>
             )}
 
-            <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-1">
-              <p className="font-bold text-slate-900">{item.medicineBrandName}</p>
-              <p className="text-slate-500">
-                Branch: {item.pharmacyName} — {item.branchName} • Units: {item.quantity}
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3 border border-slate-200 dark:border-slate-700 space-y-1">
+              <p className="font-bold text-slate-900 dark:text-slate-100">{item.medicineBrandName}</p>
+              <p className="text-slate-500 dark:text-slate-400">
+                {t('common.address')}: {item.pharmacyName} — {item.branchName} • {t('common.quantity')}: {item.quantity}
               </p>
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700 block">Release Audit Reason (Required)</label>
+              <label className="font-semibold text-slate-700 dark:text-slate-300 block">{t('admin.releaseReasonLabel')}</label>
               <Input
                 {...register('reason')}
-                placeholder="e.g. Pharmacy branch closed unexpectedly / customer dispute"
+                placeholder={t('admin.releaseReasonPlaceholder')}
+                className="dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               />
               {errors.reason && (
-                <p className="text-xs text-red-600 font-medium">{errors.reason.message}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errors.reason.message}</p>
               )}
             </div>
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>{t('common.cancel')}</Button>
               <Button
                 type="submit"
                 variant="destructive"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Releasing...' : 'Confirm Force Release'}
+                {isSubmitting ? t('admin.releasingText') : t('admin.confirmForceRelease')}
               </Button>
             </DialogFooter>
           </form>

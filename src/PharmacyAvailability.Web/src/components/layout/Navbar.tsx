@@ -6,10 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { authApi } from '@/features/auth/api/authApi';
 import { tokenManager } from '@/api/tokenManager';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { LanguageToggle } from '@/components/common/LanguageToggle';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     try {
@@ -35,22 +38,22 @@ export function Navbar() {
               <Pill className="h-5 w-5" />
             </div>
             <span className="text-lg tracking-tight font-extrabold text-blue-900 dark:text-blue-400">
-              PharmaFinder
+              {t('nav.brand')}
             </span>
           </Link>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-600 dark:text-slate-300">
             <Link to="/customer/search" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              Find Medicine
+              {t('nav.findMedicine')}
             </Link>
             <Link to="/customer/branches" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              Pharmacies
+              {t('nav.pharmacies')}
             </Link>
 
             {isAuthenticated && (user?.role === 'Customer' || user?.role === 'PlatformAdmin') && (
               <Link to="/customer/reservations" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                My Holds
+                {t('nav.myHolds')}
               </Link>
             )}
 
@@ -63,7 +66,7 @@ export function Navbar() {
                   className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 font-semibold hover:text-blue-900 dark:hover:text-blue-300"
                 >
                   <Store className="h-4 w-4" />
-                  Staff Operations
+                  {t('nav.staffOps')}
                 </Link>
               )}
 
@@ -73,23 +76,24 @@ export function Navbar() {
                 className="flex items-center gap-1.5 text-purple-700 dark:text-purple-400 font-semibold hover:text-purple-900 dark:hover:text-purple-300"
               >
                 <ShieldCheck className="h-4 w-4" />
-                Platform Admin
+                {t('nav.platformAdmin')}
               </Link>
             )}
           </nav>
         </div>
 
-        {/* Right Auth & Theme Controls */}
+        {/* Right Auth, Language & Theme Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageToggle />
           <ThemeToggle />
 
           {isAuthenticated && user ? (
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden sm:flex flex-col text-right">
+              <div className="hidden sm:flex flex-col text-start">
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{user.fullName}</span>
-                <div className="flex justify-end">
+                <div className="flex justify-start">
                   <Badge variant={user.role === 'PlatformAdmin' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
-                    {user.role}
+                    {t(`nav.roles.${user.role}`)}
                   </Badge>
                 </div>
               </div>
@@ -100,7 +104,7 @@ export function Navbar() {
                 className="text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">{t('nav.signOut')}</span>
               </Button>
             </div>
           ) : (
@@ -108,11 +112,11 @@ export function Navbar() {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/login" className="flex items-center gap-1 text-slate-700 dark:text-slate-200">
                   <UserIcon className="h-4 w-4" />
-                  Sign In
+                  {t('nav.signIn')}
                 </Link>
               </Button>
               <Button size="sm" asChild>
-                <Link to="/register">Register</Link>
+                <Link to="/register">{t('nav.register')}</Link>
               </Button>
             </div>
           )}
