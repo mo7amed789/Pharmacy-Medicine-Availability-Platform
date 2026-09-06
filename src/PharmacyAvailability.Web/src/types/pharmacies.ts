@@ -1,4 +1,4 @@
-export type PharmacyStatus = 'Pending' | 'Approved' | 'Suspended' | 'Deactivated';
+export type PharmacyStatus = 'Pending' | 'Active' | 'Suspended' | 'Deactivated' | 'Approved';
 
 export interface PharmacyDto {
   id: string;

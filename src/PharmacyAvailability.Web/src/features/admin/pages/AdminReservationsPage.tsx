@@ -50,8 +50,8 @@ export function AdminReservationsPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">System Reservations Oversight</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">System Reservations Oversight</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Platform-wide audit of medicine hold reservations and emergency administrative releases.
           </p>
         </div>
@@ -60,7 +60,7 @@ export function AdminReservationsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-800"
+            className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value="">All Statuses</option>
             <option value="Active">Active Holds</option>
@@ -89,7 +89,7 @@ export function AdminReservationsPage() {
           description="There are currently no platform reservations matching your criteria."
         />
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -106,18 +106,18 @@ export function AdminReservationsPage() {
               {data.items.map((res: ReservationDto) => (
                 <TableRow key={res.id}>
                   <TableCell>
-                    <div className="font-mono text-xs text-slate-500">{res.id.slice(0, 8)}...</div>
-                    <div className="font-semibold text-slate-800 text-xs">Customer: {res.customerId.slice(0, 8)}...</div>
+                    <div className="font-mono text-xs text-slate-500 dark:text-slate-400">{res.id.slice(0, 8)}...</div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Customer: {res.customerId.slice(0, 8)}...</div>
                   </TableCell>
 
                   <TableCell>
-                    <div className="font-bold text-slate-900">{res.medicineBrandName}</div>
-                    <div className="text-xs text-slate-500">{res.medicineGenericName}</div>
+                    <div className="font-bold text-slate-900 dark:text-slate-100">{res.medicineBrandName}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{res.medicineGenericName}</div>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-700">
+                  <TableCell className="text-xs text-slate-700 dark:text-slate-300">
                     <div className="font-medium">{res.pharmacyName}</div>
-                    <div className="text-slate-400">{res.branchName}</div>
+                    <div className="text-slate-400 dark:text-slate-500">{res.branchName}</div>
                   </TableCell>
 
                   <TableCell className="text-center">

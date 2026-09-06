@@ -50,8 +50,9 @@ export function PharmaciesApprovalPage() {
     switch (status) {
       case 'Pending':
         return <Badge variant="warning">Pending Review</Badge>;
+      case 'Active':
       case 'Approved':
-        return <Badge variant="success">Approved</Badge>;
+        return <Badge variant="success">Active</Badge>;
       case 'Suspended':
         return <Badge variant="destructive">Suspended</Badge>;
       case 'Deactivated':
@@ -65,8 +66,8 @@ export function PharmaciesApprovalPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Pharmacy Onboarding & Approvals</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Pharmacy Onboarding & Approvals</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Review partner pharmacy registrations, verify regulatory licenses, and manage account statuses.
           </p>
         </div>
@@ -74,11 +75,11 @@ export function PharmaciesApprovalPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as PharmacyStatus | '')}
-          className="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-800"
+          className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="">All Statuses</option>
           <option value="Pending">Pending Review</option>
-          <option value="Approved">Approved</option>
+          <option value="Active">Active / Approved</option>
           <option value="Suspended">Suspended</option>
           <option value="Deactivated">Deactivated</option>
         </select>
@@ -97,7 +98,7 @@ export function PharmaciesApprovalPage() {
           description="There are currently no pharmacy records matching your status filter."
         />
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -113,24 +114,24 @@ export function PharmaciesApprovalPage() {
               {pharmacies.map((pharmacy: PharmacyDto) => (
                 <TableRow key={pharmacy.id}>
                   <TableCell>
-                    <div className="font-bold text-slate-900">{pharmacy.name}</div>
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <div className="font-bold text-slate-900 dark:text-slate-100">{pharmacy.name}</div>
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       <MapPin className="h-3 w-3" />
                       <span>{pharmacy.address}</span>
                     </div>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-600">
-                    <div className="font-mono font-semibold text-slate-800">{pharmacy.licenseNumber}</div>
-                    <div className="text-slate-500">{pharmacy.city}</div>
+                  <TableCell className="text-xs">
+                    <div className="font-mono font-semibold text-slate-800 dark:text-slate-200">{pharmacy.licenseNumber}</div>
+                    <div className="text-slate-500 dark:text-slate-400">{pharmacy.city}</div>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-600">
+                  <TableCell className="text-xs text-slate-600 dark:text-slate-300">
                     <div>{pharmacy.phone}</div>
-                    {pharmacy.email && <div className="text-slate-400">{pharmacy.email}</div>}
+                    {pharmacy.email && <div className="text-slate-400 dark:text-slate-500">{pharmacy.email}</div>}
                   </TableCell>
 
-                  <TableCell className="text-center text-xs font-semibold text-slate-700">
+                  <TableCell className="text-center text-xs font-semibold text-slate-700 dark:text-slate-300">
                     {pharmacy.branchesCount}
                   </TableCell>
 
@@ -144,20 +145,20 @@ export function PharmaciesApprovalPage() {
                         size="sm"
                         disabled={approveMutation.isPending}
                         onClick={() => approveMutation.mutate(pharmacy.id)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2.5 text-xs"
+                        className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white h-7 px-2.5 text-xs"
                       >
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Approve
                       </Button>
                     )}
 
-                    {pharmacy.status === 'Approved' && (
+                    {(pharmacy.status === 'Active' || (pharmacy.status as string) === 'Approved') && (
                       <Button
                         size="sm"
                         variant="outline"
                         disabled={suspendMutation.isPending}
                         onClick={() => suspendMutation.mutate(pharmacy.id)}
-                        className="text-amber-700 border-amber-300 hover:bg-amber-50 h-7 px-2.5 text-xs"
+                        className="text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-7 px-2.5 text-xs"
                       >
                         <PauseCircle className="h-3 w-3 mr-1" />
                         Suspend
@@ -170,7 +171,7 @@ export function PharmaciesApprovalPage() {
                         variant="outline"
                         disabled={reactivateMutation.isPending}
                         onClick={() => reactivateMutation.mutate(pharmacy.id)}
-                        className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 px-2.5 text-xs"
+                        className="text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 h-7 px-2.5 text-xs"
                       >
                         <PlayCircle className="h-3 w-3 mr-1" />
                         Reactivate
@@ -183,7 +184,7 @@ export function PharmaciesApprovalPage() {
                         variant="ghost"
                         disabled={deactivateMutation.isPending}
                         onClick={() => deactivateMutation.mutate(pharmacy.id)}
-                        className="text-red-600 hover:bg-red-50 h-7 px-2 text-xs"
+                        className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 h-7 px-2 text-xs"
                         title="Deactivate"
                       >
                         <XCircle className="h-3.5 w-3.5" />

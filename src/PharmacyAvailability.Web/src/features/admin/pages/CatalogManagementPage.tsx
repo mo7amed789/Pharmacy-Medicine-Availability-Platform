@@ -99,8 +99,8 @@ export function CatalogManagementPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Central Medicine Catalog</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Central Medicine Catalog</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Authoritative platform catalog definitions, barcode mappings, and search aliases.
           </p>
         </div>
@@ -122,7 +122,7 @@ export function CatalogManagementPage() {
           placeholder="Search catalog by brand or generic..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 h-9 text-xs bg-white"
+          className="pl-9 h-9 text-xs bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 dark:text-slate-100"
         />
       </div>
 
@@ -141,7 +141,7 @@ export function CatalogManagementPage() {
           onAction={() => setIsCreateOpen(true)}
         />
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -157,20 +157,20 @@ export function CatalogManagementPage() {
               {medicines.items.map((med: MedicineDto) => (
                 <TableRow key={med.id}>
                   <TableCell>
-                    <div className="font-bold text-slate-900">{med.brandName}</div>
-                    <div className="text-xs text-slate-500">{med.genericName}</div>
+                    <div className="font-bold text-slate-900 dark:text-slate-100">{med.brandName}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{med.genericName}</div>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-600">
+                  <TableCell className="text-xs text-slate-600 dark:text-slate-300">
                     <div>{med.activeIngredient}</div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500">
                       {med.dosageForm} • {med.strength}
                     </div>
                   </TableCell>
 
-                  <TableCell className="text-xs text-slate-600">
+                  <TableCell className="text-xs text-slate-600 dark:text-slate-300">
                     <div className="font-medium">{med.categoryName}</div>
-                    <div className="text-[11px] text-slate-400">{med.manufacturerName}</div>
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500">{med.manufacturerName}</div>
                   </TableCell>
 
                   <TableCell className="text-center text-xs">
