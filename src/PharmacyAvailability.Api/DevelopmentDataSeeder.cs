@@ -285,8 +285,8 @@ public static class DevelopmentDataSeeder
             logger.LogInformation("DevelopmentDataSeeder: Seeded PlatformAdmin (admin@pharma.com).");
         }
 
-        // Pharmacy Admin for El-Ezaby
-        var ezabyPharmacy = pharmacies.FirstOrDefault(p => p.Name.Contains("Ezaby"));
+        // Pharmacy Admin for El-Ezaby (or first active pharmacy)
+        var ezabyPharmacy = pharmacies.FirstOrDefault(p => p.Name.Contains("Ezaby")) ?? pharmacies.FirstOrDefault();
         if (ezabyPharmacy != null && !await db.Users.AnyAsync(u => u.Email == "ezaby.admin@pharma.com"))
         {
             var pharmacyAdminHash = passwordHasher.HashPassword(dummyUser, "Pharmacy123!");
@@ -306,8 +306,8 @@ public static class DevelopmentDataSeeder
             logger.LogInformation("DevelopmentDataSeeder: Seeded PharmacyStaff (ezaby.staff@pharma.com).");
         }
 
-        // Pharmacy Admin for Seif
-        var seifPharmacy = pharmacies.FirstOrDefault(p => p.Name.Contains("Seif"));
+        // Pharmacy Admin for Seif (or second active pharmacy)
+        var seifPharmacy = pharmacies.FirstOrDefault(p => p.Name.Contains("Seif")) ?? pharmacies.Skip(1).FirstOrDefault() ?? ezabyPharmacy;
         if (seifPharmacy != null && !await db.Users.AnyAsync(u => u.Email == "seif.admin@pharma.com"))
         {
             var seifAdminHash = passwordHasher.HashPassword(dummyUser, "Pharmacy123!");
