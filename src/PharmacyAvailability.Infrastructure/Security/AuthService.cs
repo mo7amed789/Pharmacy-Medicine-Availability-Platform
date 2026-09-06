@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PharmacyAvailability.Application.Auth;
@@ -14,17 +15,20 @@ public class AuthService : IAuthService
     private readonly PharmacyDbContext _context;
     private readonly IPasswordHashService _passwordHasher;
     private readonly ITokenService _tokenService;
+    private readonly IVerificationSender _verificationSender;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         PharmacyDbContext context,
         IPasswordHashService passwordHasher,
         ITokenService tokenService,
+        IVerificationSender verificationSender,
         ILogger<AuthService> logger)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
+        _verificationSender = verificationSender;
         _logger = logger;
     }
 
@@ -36,8 +40,11 @@ public class AuthService : IAuthService
             throw new DomainValidationException("Password must be at least 8 characters long.");
         if (string.IsNullOrWhiteSpace(request.FullName))
             throw new DomainValidationException("Full name is required.");
+        if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+            throw new DomainValidationException("Phone number is required.");
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var normalizedPhone = request.PhoneNumber.Trim();
 
         var existing = await _context.Users.AnyAsync(u => u.Email == normalizedEmail, ct);
         if (existing)
@@ -47,16 +54,16 @@ public class AuthService : IAuthService
         }
 
         // Dummy user to hash password
-        var dummyUser = new User(normalizedEmail, "temp", request.FullName.Trim(), UserRole.Customer);
+        var dummyUser = new User(normalizedEmail, "temp", request.FullName.Trim(), UserRole.Customer, normalizedPhone);
         var hashedPassword = _passwordHasher.HashPassword(dummyUser, request.Password);
 
-        // Security requirement: Public registration ALWAYS produces a Customer role.
+        // Security requirement: Public registration ALWAYS produces a Customer role with unverified status.
         var user = new User(
             normalizedEmail,
             hashedPassword,
             request.FullName.Trim(),
             UserRole.Customer,
-            request.PhoneNumber?.Trim());
+            normalizedPhone);
 
         var (accessToken, accessExpiry) = _tokenService.GenerateAccessToken(user);
         var (rawRefresh, refreshHash, refreshExpiry) = _tokenService.GenerateRefreshToken();
@@ -64,9 +71,25 @@ public class AuthService : IAuthService
         user.AddRefreshToken(refreshHash, refreshExpiry);
 
         _context.Users.Add(user);
+
+        // Generate and dispatch verification codes for Email & Phone
+        var emailOtp = GenerateOtpCode();
+        var phoneOtp = GenerateOtpCode();
+        var expiry = DateTime.UtcNow.AddMinutes(10);
+
+        var emailCode = new VerificationCode(user.Id, emailOtp, VerificationType.Email, expiry);
+        var phoneCode = new VerificationCode(user.Id, phoneOtp, VerificationType.Phone, expiry);
+
+        _context.VerificationCodes.Add(emailCode);
+        _context.VerificationCodes.Add(phoneCode);
+
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("New customer registered successfully: {UserId} ({Email}).", user.Id, user.Email);
+        // Dispatch codes (async)
+        await _verificationSender.SendEmailCodeAsync(user.Email, emailOtp, ct);
+        await _verificationSender.SendPhoneCodeAsync(user.PhoneNumber, phoneOtp, ct);
+
+        _logger.LogInformation("New customer registered successfully: {UserId} ({Email}). Verification codes dispatched.", user.Id, user.Email);
 
         return new AuthResponse(
             accessToken,
@@ -224,6 +247,124 @@ public class AuthService : IAuthService
         return MapUserToDto(user);
     }
 
+    public async Task<VerificationStatusResponse> VerifyCodeAsync(Guid userId, VerifyCodeRequest request, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Type))
+            throw new DomainValidationException("Verification type is required ('Email' or 'Phone').");
+        if (string.IsNullOrWhiteSpace(request.Code))
+            throw new DomainValidationException("Verification code is required.");
+
+        var user = await _context.Users.FindAsync(new object[] { userId }, ct);
+        if (user == null || !user.IsActive)
+            throw new UnauthorizedAccessException("User account not found or inactive.");
+
+        if (!Enum.TryParse<VerificationType>(request.Type.Trim(), true, out var type))
+            throw new DomainValidationException("Invalid verification type. Expected 'Email' or 'Phone'.");
+
+        // Find active verification code for this user and type
+        var code = await _context.VerificationCodes
+            .Where(vc => vc.UserId == userId && vc.Type == type && !vc.IsUsed)
+            .OrderByDescending(vc => vc.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (code == null)
+            throw new DomainValidationException("No pending verification code found. Please request a new code.");
+
+        if (code.IsExpired)
+            throw new DomainValidationException("Verification code has expired. Please request a new code.");
+
+        var isValid = code.Verify(request.Code);
+        if (!isValid)
+        {
+            await _context.SaveChangesAsync(ct);
+            var remainingAttempts = VerificationCode.MaxAttempts - code.AttemptCount;
+            throw new DomainValidationException($"Invalid verification code. {remainingAttempts} attempts remaining.");
+        }
+
+        if (type == VerificationType.Email)
+        {
+            user.VerifyEmail();
+            _logger.LogInformation("User {UserId} successfully verified email.", userId);
+        }
+        else if (type == VerificationType.Phone)
+        {
+            user.VerifyPhone();
+            _logger.LogInformation("User {UserId} successfully verified phone number.", userId);
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        return new VerificationStatusResponse(user.IsEmailVerified, user.IsPhoneVerified);
+    }
+
+    public async Task SendVerificationCodeAsync(Guid userId, SendVerificationRequest request, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Type))
+            throw new DomainValidationException("Verification type is required ('Email' or 'Phone').");
+
+        var user = await _context.Users.FindAsync(new object[] { userId }, ct);
+        if (user == null || !user.IsActive)
+            throw new UnauthorizedAccessException("User account not found or inactive.");
+
+        if (!Enum.TryParse<VerificationType>(request.Type.Trim(), true, out var type))
+            throw new DomainValidationException("Invalid verification type. Expected 'Email' or 'Phone'.");
+
+        if (type == VerificationType.Email && user.IsEmailVerified)
+            throw new DomainValidationException("Email is already verified.");
+        if (type == VerificationType.Phone && user.IsPhoneVerified)
+            throw new DomainValidationException("Phone number is already verified.");
+
+        // Rate limiting check: 60 seconds minimum between requests
+        var lastCode = await _context.VerificationCodes
+            .Where(vc => vc.UserId == userId && vc.Type == type)
+            .OrderByDescending(vc => vc.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (lastCode != null && (DateTime.UtcNow - lastCode.CreatedAt) < TimeSpan.FromSeconds(60))
+        {
+            var waitSec = 60 - (int)(DateTime.UtcNow - lastCode.CreatedAt).TotalSeconds;
+            throw new DomainValidationException($"Please wait {waitSec} seconds before requesting a new code.");
+        }
+
+        // Mark previous unused codes as used to invalidate them
+        if (lastCode != null && !lastCode.IsUsed)
+        {
+            lastCode.MarkUsed();
+        }
+
+        var newOtp = GenerateOtpCode();
+        var expiry = DateTime.UtcNow.AddMinutes(10);
+        var verificationCode = new VerificationCode(userId, newOtp, type, expiry);
+
+        _context.VerificationCodes.Add(verificationCode);
+        await _context.SaveChangesAsync(ct);
+
+        if (type == VerificationType.Email)
+        {
+            await _verificationSender.SendEmailCodeAsync(user.Email, newOtp, ct);
+        }
+        else
+        {
+            await _verificationSender.SendPhoneCodeAsync(user.PhoneNumber, newOtp, ct);
+        }
+
+        _logger.LogInformation("Dispatched new {Type} verification code for user {UserId}.", type, userId);
+    }
+
+    public async Task<VerificationStatusResponse> GetVerificationStatusAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _context.Users.FindAsync(new object[] { userId }, ct);
+        if (user == null || !user.IsActive)
+            throw new UnauthorizedAccessException("User account not found or inactive.");
+
+        return new VerificationStatusResponse(user.IsEmailVerified, user.IsPhoneVerified);
+    }
+
+    private static string GenerateOtpCode()
+    {
+        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+    }
+
     private static UserDto MapUserToDto(User user) =>
-        new(user.Id, user.Email, user.FullName, user.PhoneNumber, user.Role.ToString(), user.PharmacyId);
+        new(user.Id, user.Email, user.FullName, user.PhoneNumber, user.Role.ToString(), user.PharmacyId, user.IsEmailVerified, user.IsPhoneVerified);
 }

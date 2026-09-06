@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Pill, Lock, Mail, User, Phone, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { authApi } from '../api/authApi';
+import { registerSchema } from '@/lib/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -15,6 +16,7 @@ export function RegisterPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const { setSession } = useAuthStore();
@@ -23,21 +25,51 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+
+    // Client-side Zod Validation
+    const validationResult = registerSchema.safeParse({
+      fullName,
+      email,
+      phoneNumber,
+      password,
+    });
+
+    if (!validationResult.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of validationResult.error.issues) {
+        const pathKey = issue.path[0] as string;
+        if (!errors[pathKey]) {
+          errors[pathKey] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const response = await authApi.register({
-        fullName,
-        email,
-        phoneNumber: phoneNumber || null,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
         password,
       });
 
       setSession(response.user, response.accessToken, response.refreshToken);
-      navigate('/customer/search', { replace: true });
+      navigate('/verify', { replace: true });
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setError(err.detail || err.title);
+        if (err.validationErrors) {
+          const mapped: Record<string, string> = {};
+          for (const [key, msgs] of Object.entries(err.validationErrors)) {
+            const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
+            mapped[lowerKey] = msgs[0] || 'Invalid value';
+          }
+          setFieldErrors(mapped);
+        }
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -79,10 +111,13 @@ export function RegisterPage() {
                   placeholder="Mohamed Ahmed"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.fullName ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
+              {fieldErrors.fullName && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.fullName}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -94,14 +129,17 @@ export function RegisterPage() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Phone Number (Optional)</label>
+              <label className="text-xs font-semibold text-slate-700">Phone Number</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
@@ -109,9 +147,13 @@ export function RegisterPage() {
                   placeholder="+20 100 000 0000"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.phoneNumber ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  required
                 />
               </div>
+              {fieldErrors.phoneNumber && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.phoneNumber}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -123,10 +165,13 @@ export function RegisterPage() {
                   placeholder="Minimum 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.password}</p>
+              )}
             </div>
           </CardContent>
 

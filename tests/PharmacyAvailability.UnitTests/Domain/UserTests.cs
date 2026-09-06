@@ -10,13 +10,42 @@ public class UserTests
     public void CreateCustomer_WithoutPharmacyId_Succeeds()
     {
         // Arrange & Act
-        var user = new User("patient@example.com", "hashed_pwd", "Ahmed Ali", UserRole.Customer);
+        var user = new User("patient@example.com", "hashed_pwd", "Ahmed Ali", UserRole.Customer, "+201012345678");
 
         // Assert
         Assert.Equal("patient@example.com", user.Email);
+        Assert.Equal("+201012345678", user.PhoneNumber);
         Assert.Equal(UserRole.Customer, user.Role);
         Assert.Null(user.PharmacyId);
         Assert.True(user.IsActive);
+        Assert.False(user.IsEmailVerified);
+        Assert.False(user.IsPhoneVerified);
+        Assert.False(user.IsFullyVerified);
+    }
+
+    [Fact]
+    public void CreateUser_WithoutPhoneNumber_ThrowsDomainValidationException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<DomainValidationException>(() =>
+            new User("patient@example.com", "hashed_pwd", "Ahmed Ali", UserRole.Customer, ""));
+    }
+
+    [Fact]
+    public void VerifyEmailAndPhone_UpdatesVerificationFlags()
+    {
+        // Arrange
+        var user = new User("patient@example.com", "hashed_pwd", "Ahmed Ali", UserRole.Customer, "+201012345678");
+
+        // Act & Assert
+        user.VerifyEmail();
+        Assert.True(user.IsEmailVerified);
+        Assert.False(user.IsPhoneVerified);
+        Assert.False(user.IsFullyVerified);
+
+        user.VerifyPhone();
+        Assert.True(user.IsPhoneVerified);
+        Assert.True(user.IsFullyVerified);
     }
 
     [Fact]
@@ -24,7 +53,7 @@ public class UserTests
     {
         // Arrange & Act & Assert
         Assert.Throws<DomainValidationException>(() =>
-            new User("pharmacist@example.com", "hashed_pwd", "Mona Hassan", UserRole.PharmacyStaff));
+            new User("pharmacist@example.com", "hashed_pwd", "Mona Hassan", UserRole.PharmacyStaff, "+201100000000"));
     }
 
     [Fact]
@@ -45,7 +74,7 @@ public class UserTests
     public void AddRefreshToken_AddsActiveToken()
     {
         // Arrange
-        var user = new User("user@test.com", "pwd", "John", UserRole.Customer);
+        var user = new User("user@test.com", "pwd", "John", UserRole.Customer, "+201012345678");
         var expiry = DateTime.UtcNow.AddDays(7);
 
         // Act
@@ -62,7 +91,7 @@ public class UserTests
     public void RevokeAllRefreshTokens_RevokesAllActiveTokens()
     {
         // Arrange
-        var user = new User("user@test.com", "pwd", "John", UserRole.Customer);
+        var user = new User("user@test.com", "pwd", "John", UserRole.Customer, "+201012345678");
         var t1 = user.AddRefreshToken("h1", DateTime.UtcNow.AddDays(1));
         var t2 = user.AddRefreshToken("h2", DateTime.UtcNow.AddDays(2));
 

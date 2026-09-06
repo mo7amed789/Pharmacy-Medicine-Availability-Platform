@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Pill, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { authApi } from '../api/authApi';
+import { loginSchema } from '@/lib/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -13,6 +14,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const { setSession } = useAuthStore();
@@ -24,10 +26,25 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+
+    const validationResult = loginSchema.safeParse({ email, password });
+    if (!validationResult.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of validationResult.error.issues) {
+        const pathKey = issue.path[0] as string;
+        if (!errors[pathKey]) {
+          errors[pathKey] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await authApi.login({ email, password });
+      const response = await authApi.login({ email: email.trim(), password });
       setSession(response.user, response.accessToken, response.refreshToken);
 
       // Role-based smart redirect if from is root
@@ -45,6 +62,14 @@ export function LoginPage() {
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setError(err.detail || err.title);
+        if (err.validationErrors) {
+          const mapped: Record<string, string> = {};
+          for (const [key, msgs] of Object.entries(err.validationErrors)) {
+            const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
+            mapped[lowerKey] = msgs[0] || 'Invalid value';
+          }
+          setFieldErrors(mapped);
+        }
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -86,10 +111,13 @@ export function LoginPage() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -101,10 +129,13 @@ export function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9"
+                  className={`pl-9 ${fieldErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   required
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="text-xs text-red-600 mt-1">{fieldErrors.password}</p>
+              )}
             </div>
           </CardContent>
 

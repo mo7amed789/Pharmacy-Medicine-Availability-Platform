@@ -56,7 +56,8 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
             $"user_{Guid.NewGuid():N}@test.com",
             "hashed_pwd",
             "Test Admin",
-            UserRole.PlatformAdmin);
+            UserRole.PlatformAdmin,
+            "+201000000002");
         context.Users.Add(user);
 
         await context.SaveChangesAsync();
@@ -134,8 +135,8 @@ public class DatabaseConstraintTests : IClassFixture<DatabaseFixture>
         using var context = _fixture.CreateContext();
         var email = $"duplicate_{Guid.NewGuid():N}@test.com";
 
-        var u1 = new User(email, "pwd1", "User One", UserRole.Customer);
-        var u2 = new User(email, "pwd2", "User Two", UserRole.Customer);
+        var u1 = new User(email, "pwd1", "User One", UserRole.Customer, "+201011111111");
+        var u2 = new User(email, "pwd2", "User Two", UserRole.Customer, "+201022222222");
 
         context.Users.Add(u1);
         await context.SaveChangesAsync();

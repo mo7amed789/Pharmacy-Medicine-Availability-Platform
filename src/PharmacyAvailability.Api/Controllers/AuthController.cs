@@ -61,13 +61,61 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<ActionResult<UserDto>> GetMe(CancellationToken ct)
     {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return Unauthorized();
+
+        var user = await _authService.GetCurrentUserAsync(userId.Value, ct);
+        return Ok(user);
+    }
+
+    [HttpPost("verify")]
+    [Authorize]
+    [EnableRateLimiting("AuthRateLimit")]
+    public async Task<ActionResult<VerificationStatusResponse>> Verify(
+        [FromBody] VerifyCodeRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return Unauthorized();
+
+        var status = await _authService.VerifyCodeAsync(userId.Value, request, ct);
+        return Ok(status);
+    }
+
+    [HttpPost("verify/resend")]
+    [Authorize]
+    [EnableRateLimiting("AuthRateLimit")]
+    public async Task<IActionResult> ResendVerification(
+        [FromBody] SendVerificationRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return Unauthorized();
+
+        await _authService.SendVerificationCodeAsync(userId.Value, request, ct);
+        return Ok(new { message = $"Verification code sent for {request.Type}." });
+    }
+
+    [HttpGet("verify/status")]
+    [Authorize]
+    public async Task<ActionResult<VerificationStatusResponse>> GetVerificationStatus(CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return Unauthorized();
+
+        var status = await _authService.GetVerificationStatusAsync(userId.Value, ct);
+        return Ok(status);
+    }
+
+    private Guid? GetCurrentUserId()
+    {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value;
 
-        if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized();
-
-        var user = await _authService.GetCurrentUserAsync(userId, ct);
-        return Ok(user);
+        return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
     }
 }

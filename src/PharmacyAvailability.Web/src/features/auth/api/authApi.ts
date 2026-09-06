@@ -7,6 +7,9 @@ import {
   RefreshTokenRequest,
   RevokeTokenRequest,
   UserDto,
+  VerifyCodeRequest,
+  SendVerificationRequest,
+  VerificationStatusResponse,
 } from '@/types/auth';
 
 export const authApi = {
@@ -31,6 +34,21 @@ export const authApi = {
 
   getMe: async (): Promise<UserDto> => {
     const res = await apiClient.get<UserDto>(ENDPOINTS.AUTH_ME);
+    return res.data;
+  },
+
+  verifyCode: async (request: VerifyCodeRequest): Promise<VerificationStatusResponse> => {
+    const res = await apiClient.post<VerificationStatusResponse>(ENDPOINTS.AUTH_VERIFY, request);
+    return res.data;
+  },
+
+  resendCode: async (request: SendVerificationRequest): Promise<{ message: string }> => {
+    const res = await apiClient.post<{ message: string }>(ENDPOINTS.AUTH_VERIFY_RESEND, request);
+    return res.data;
+  },
+
+  getVerificationStatus: async (): Promise<VerificationStatusResponse> => {
+    const res = await apiClient.get<VerificationStatusResponse>(ENDPOINTS.AUTH_VERIFY_STATUS);
     return res.data;
   },
 };

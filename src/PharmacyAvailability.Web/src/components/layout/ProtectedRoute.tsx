@@ -6,10 +6,11 @@ import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[];
+  requireVerified?: boolean;
   children: ReactNode;
 }
 
-export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
+export function ProtectedRoute({ allowedRoles, requireVerified = true, children }: ProtectedRouteProps) {
   const { isAuthenticated, user, isInitialized } = useAuthStore();
   const location = useLocation();
 
@@ -23,6 +24,10 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requireVerified && (!user.isEmailVerified || !user.isPhoneVerified)) {
+    return <Navigate to="/verify" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

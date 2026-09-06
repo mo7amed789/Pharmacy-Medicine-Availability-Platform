@@ -4,7 +4,7 @@ public record RegisterRequest(
     string Email,
     string Password,
     string FullName,
-    string? PhoneNumber);
+    string PhoneNumber);
 
 public record LoginRequest(
     string Email,
@@ -20,12 +20,25 @@ public record UserDto(
     Guid Id,
     string Email,
     string FullName,
-    string? PhoneNumber,
+    string PhoneNumber,
     string Role,
-    Guid? PharmacyId);
+    Guid? PharmacyId,
+    bool IsEmailVerified,
+    bool IsPhoneVerified);
 
 public record AuthResponse(
     string AccessToken,
     string RefreshToken,
     DateTime ExpiresAt,
     UserDto User);
+
+public record VerifyCodeRequest(
+    string Type,
+    string Code);
+
+public record SendVerificationRequest(
+    string Type);
+
+public record VerificationStatusResponse(
+    bool IsEmailVerified,
+    bool IsPhoneVerified);

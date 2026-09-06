@@ -4,9 +4,11 @@ export interface UserDto {
   id: string;
   email: string;
   fullName: string;
-  phoneNumber: string | null;
+  phoneNumber: string;
   role: UserRole;
   pharmacyId: string | null;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
 }
 
 export interface AuthResponse {
@@ -20,7 +22,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   fullName: string;
-  phoneNumber?: string | null;
+  phoneNumber: string;
 }
 
 export interface LoginRequest {
@@ -34,4 +36,18 @@ export interface RefreshTokenRequest {
 
 export interface RevokeTokenRequest {
   refreshToken: string;
+}
+
+export interface VerifyCodeRequest {
+  type: 'Email' | 'Phone';
+  code: string;
+}
+
+export interface SendVerificationRequest {
+  type: 'Email' | 'Phone';
+}
+
+export interface VerificationStatusResponse {
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
 }

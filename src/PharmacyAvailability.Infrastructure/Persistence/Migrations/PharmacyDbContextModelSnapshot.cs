@@ -348,6 +348,16 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsEmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsPhoneVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("datetime2");
 
@@ -360,6 +370,7 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PhoneNumber")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -372,10 +383,54 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Users_Email");
 
+                    b.HasIndex("PhoneNumber")
+                        .HasDatabaseName("IX_Users_PhoneNumber");
+
                     b.ToTable("Users", null, t =>
                         {
                             t.HasCheckConstraint("CK_Users_Role", "[Role] IN (1, 2, 3, 4)");
                         });
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Identity.VerificationCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Type", "IsUsed")
+                        .HasDatabaseName("IX_VerificationCodes_UserId_Type_IsUsed");
+
+                    b.ToTable("VerificationCodes", (string)null);
                 });
 
             modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventorySyncLog", b =>

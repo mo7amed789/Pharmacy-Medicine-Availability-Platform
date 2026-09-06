@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Boxes, History, Search } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { useBranchStore } from '@/app/store/branchStore';
@@ -27,6 +29,13 @@ import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { ApiError } from '@/api/apiClient';
+import {
+  adjustStockSchema,
+  AdjustStockFormData,
+  updatePriceSchema,
+  UpdatePriceFormData,
+} from '@/lib/validations';
 
 export function InventoryPage() {
   const { user } = useAuthStore();
@@ -35,17 +44,9 @@ export function InventoryPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Stock Adjustment Modal
+  // Modals state
   const [adjustItem, setAdjustItem] = useState<InventoryItemDto | null>(null);
-  const [deltaQuantity, setDeltaQuantity] = useState<number>(0);
-  const [adjustReason, setAdjustReason] = useState('ManualAdjustment');
-  const [adjustNotes, setAdjustNotes] = useState('');
-
-  // Price Update Modal
   const [priceItem, setPriceItem] = useState<InventoryItemDto | null>(null);
-  const [newPrice, setNewPrice] = useState<number>(0);
-
-  // Transaction History Modal
   const [historyItem, setHistoryItem] = useState<InventoryItemDto | null>(null);
 
   const pharmacyId = user?.pharmacyId;
@@ -67,37 +68,6 @@ export function InventoryPage() {
         ? pharmacyOpsApi.getTransactions(pharmacyId, branchId, historyItem.medicineId)
         : Promise.resolve([]),
     enabled: !!pharmacyId && !!branchId && !!historyItem,
-  });
-
-  const adjustMutation = useMutation({
-    mutationFn: async () => {
-      if (!pharmacyId || !branchId || !adjustItem) return;
-      return pharmacyOpsApi.adjustStock(pharmacyId, branchId, adjustItem.medicineId, {
-        deltaQuantity,
-        reason: adjustReason,
-        notes: adjustNotes || null,
-      });
-    },
-    onSuccess: () => {
-      setAdjustItem(null);
-      setDeltaQuantity(0);
-      setAdjustNotes('');
-      queryClient.invalidateQueries({ queryKey: ['branch-inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['branch-dashboard'] });
-    },
-  });
-
-  const priceMutation = useMutation({
-    mutationFn: async () => {
-      if (!pharmacyId || !branchId || !priceItem) return;
-      return pharmacyOpsApi.updatePrice(pharmacyId, branchId, priceItem.medicineId, {
-        newPrice,
-      });
-    },
-    onSuccess: () => {
-      setPriceItem(null);
-      queryClient.invalidateQueries({ queryKey: ['branch-inventory'] });
-    },
   });
 
   if (!currentBranch) {
@@ -205,10 +175,7 @@ export function InventoryPage() {
                       size="sm"
                       variant="outline"
                       className="h-8 px-2 text-xs"
-                      onClick={() => {
-                        setAdjustItem(item);
-                        setDeltaQuantity(0);
-                      }}
+                      onClick={() => setAdjustItem(item)}
                       title="Adjust Stock"
                     >
                       Stock ±
@@ -217,10 +184,7 @@ export function InventoryPage() {
                       size="sm"
                       variant="outline"
                       className="h-8 px-2 text-xs"
-                      onClick={() => {
-                        setPriceItem(item);
-                        setNewPrice(item.price);
-                      }}
+                      onClick={() => setPriceItem(item)}
                       title="Update Price"
                     >
                       Price
@@ -243,106 +207,31 @@ export function InventoryPage() {
       )}
 
       {/* Stock Adjustment Modal */}
-      <Dialog open={!!adjustItem} onOpenChange={() => setAdjustItem(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Adjust Physical Stock</DialogTitle>
-          </DialogHeader>
-
-          {adjustItem && (
-            <div className="space-y-4 py-2">
-              <div className="rounded-lg bg-slate-50 p-3 text-xs space-y-1">
-                <p className="font-bold text-slate-900">{adjustItem.medicineBrandName}</p>
-                <p className="text-slate-500">Current available: {adjustItem.availableQuantity} | Total: {adjustItem.totalStock}</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">
-                  Stock Delta (+ to add, - to subtract)
-                </label>
-                <Input
-                  type="number"
-                  value={deltaQuantity}
-                  onChange={(e) => setDeltaQuantity(parseInt(e.target.value) || 0)}
-                  placeholder="e.g. 20 or -5"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Adjustment Reason</label>
-                <select
-                  value={adjustReason}
-                  onChange={(e) => setAdjustReason(e.target.value)}
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs"
-                >
-                  <option value="ReceivedShipment">Received Shipment</option>
-                  <option value="ManualAdjustment">Manual Count Adjustment</option>
-                  <option value="DispensedDamaged">Damaged / Expired Disposal</option>
-                  <option value="ReturnFromCustomer">Customer Return</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Notes (Optional)</label>
-                <Input
-                  value={adjustNotes}
-                  onChange={(e) => setAdjustNotes(e.target.value)}
-                  placeholder="Invoice or audit reference..."
-                />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAdjustItem(null)}>Cancel</Button>
-            <Button
-              onClick={() => adjustMutation.mutate()}
-              disabled={deltaQuantity === 0 || adjustMutation.isPending}
-            >
-              {adjustMutation.isPending ? 'Saving...' : 'Apply Stock Change'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {pharmacyId && branchId && (
+        <AdjustStockDialog
+          item={adjustItem}
+          pharmacyId={pharmacyId}
+          branchId={branchId}
+          onClose={() => setAdjustItem(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['branch-inventory'] });
+            queryClient.invalidateQueries({ queryKey: ['branch-dashboard'] });
+          }}
+        />
+      )}
 
       {/* Price Update Modal */}
-      <Dialog open={!!priceItem} onOpenChange={() => setPriceItem(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Update Medicine Price</DialogTitle>
-          </DialogHeader>
-
-          {priceItem && (
-            <div className="space-y-4 py-2">
-              <div className="rounded-lg bg-slate-50 p-3 text-xs">
-                <p className="font-bold text-slate-900">{priceItem.medicineBrandName}</p>
-                <p className="text-slate-500">Current Price: {formatCurrency(priceItem.price, priceItem.currency)}</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">New Unit Price ({priceItem.currency})</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={newPrice}
-                  onChange={(e) => setNewPrice(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPriceItem(null)}>Cancel</Button>
-            <Button
-              onClick={() => priceMutation.mutate()}
-              disabled={newPrice <= 0 || priceMutation.isPending}
-            >
-              {priceMutation.isPending ? 'Updating...' : 'Save New Price'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {pharmacyId && branchId && (
+        <UpdatePriceDialog
+          item={priceItem}
+          pharmacyId={pharmacyId}
+          branchId={branchId}
+          onClose={() => setPriceItem(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['branch-inventory'] });
+          }}
+        />
+      )}
 
       {/* Transaction History Modal */}
       <Dialog open={!!historyItem} onOpenChange={() => setHistoryItem(null)}>
@@ -383,5 +272,266 @@ export function InventoryPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+interface AdjustStockDialogProps {
+  item: InventoryItemDto | null;
+  pharmacyId: string;
+  branchId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function AdjustStockDialog({ item, pharmacyId, branchId, onClose, onSuccess }: AdjustStockDialogProps) {
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<AdjustStockFormData>({
+    resolver: zodResolver(adjustStockSchema),
+    defaultValues: {
+      deltaQuantity: 0,
+      reason: 'ManualAdjustment',
+      notes: '',
+    },
+  });
+
+  useEffect(() => {
+    if (item) {
+      reset({
+        deltaQuantity: 0,
+        reason: 'ManualAdjustment',
+        notes: '',
+      });
+      setServerError(null);
+    }
+  }, [item, reset]);
+
+  const deltaQuantity = watch('deltaQuantity') || 0;
+  const resultingStock = (item?.totalStock ?? 0) + deltaQuantity;
+
+  const onSubmit = async (values: AdjustStockFormData) => {
+    if (!item) return;
+    setServerError(null);
+
+    try {
+      await pharmacyOpsApi.adjustStock(pharmacyId, branchId, item.medicineId, {
+        deltaQuantity: values.deltaQuantity,
+        reason: values.reason,
+        notes: values.notes || null,
+      });
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.isValidationError) {
+          const fieldErrors = err.getAllFieldErrors();
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            const camelKey = (field.charAt(0).toLowerCase() + field.slice(1)) as keyof AdjustStockFormData;
+            setError(camelKey, { message });
+          });
+        }
+        setServerError(err.detail || err.title);
+      } else if (err instanceof Error) {
+        setServerError(err.message);
+      } else {
+        setServerError('Failed to apply stock adjustment.');
+      }
+    }
+  };
+
+  return (
+    <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-slate-900">Adjust Physical Stock</DialogTitle>
+        </DialogHeader>
+
+        {item && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+            {serverError && (
+              <div className="rounded-md bg-red-50 p-2.5 text-xs text-red-700 border border-red-200">
+                {serverError}
+              </div>
+            )}
+
+            <div className="rounded-lg bg-slate-50 p-3 text-xs space-y-1">
+              <p className="font-bold text-slate-900">{item.medicineBrandName}</p>
+              <div className="flex justify-between text-slate-500">
+                <span>Current Quantity: {item.totalStock}</span>
+                <span>Available to reserve: {item.availableQuantity}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Stock Adjustment (Delta)</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  {...register('deltaQuantity', { valueAsNumber: true })}
+                  placeholder="e.g. +10 or -5"
+                />
+                <span className="text-xs font-medium text-slate-600 whitespace-nowrap">
+                  Resulting: <strong className={resultingStock < 0 ? 'text-red-600' : 'text-slate-900'}>{resultingStock}</strong>
+                </span>
+              </div>
+              {errors.deltaQuantity && (
+                <p className="text-xs text-red-600 font-medium">{errors.deltaQuantity.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Adjustment Reason</label>
+              <select
+                {...register('reason')}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs"
+              >
+                <option value="ReceivedShipment">Received Shipment</option>
+                <option value="ManualAdjustment">Manual Count Adjustment</option>
+                <option value="DispensedDamaged">Damaged / Expired Disposal</option>
+                <option value="ReturnFromCustomer">Customer Return</option>
+              </select>
+              {errors.reason && (
+                <p className="text-xs text-red-600 font-medium">{errors.reason.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Notes (Optional)</label>
+              <Input
+                {...register('notes')}
+                placeholder="Invoice or audit reference..."
+              />
+              {errors.notes && (
+                <p className="text-xs text-red-600 font-medium">{errors.notes.message}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Apply Stock Change'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface UpdatePriceDialogProps {
+  item: InventoryItemDto | null;
+  pharmacyId: string;
+  branchId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function UpdatePriceDialog({ item, pharmacyId, branchId, onClose, onSuccess }: UpdatePriceDialogProps) {
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<UpdatePriceFormData>({
+    resolver: zodResolver(updatePriceSchema),
+    defaultValues: {
+      newPrice: item?.price || 0,
+    },
+  });
+
+  useEffect(() => {
+    if (item) {
+      reset({
+        newPrice: item.price,
+      });
+      setServerError(null);
+    }
+  }, [item, reset]);
+
+  const onSubmit = async (values: UpdatePriceFormData) => {
+    if (!item) return;
+    setServerError(null);
+
+    try {
+      await pharmacyOpsApi.updatePrice(pharmacyId, branchId, item.medicineId, {
+        newPrice: values.newPrice,
+      });
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.isValidationError) {
+          const fieldErrors = err.getAllFieldErrors();
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            const camelKey = (field.charAt(0).toLowerCase() + field.slice(1)) as keyof UpdatePriceFormData;
+            setError(camelKey, { message });
+          });
+        }
+        setServerError(err.detail || err.title);
+      } else if (err instanceof Error) {
+        setServerError(err.message);
+      } else {
+        setServerError('Failed to update price.');
+      }
+    }
+  };
+
+  return (
+    <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-slate-900">Update Medicine Price</DialogTitle>
+        </DialogHeader>
+
+        {item && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+            {serverError && (
+              <div className="rounded-md bg-red-50 p-2.5 text-xs text-red-700 border border-red-200">
+                {serverError}
+              </div>
+            )}
+
+            <div className="rounded-lg bg-slate-50 p-3 text-xs">
+              <p className="font-bold text-slate-900">{item.medicineBrandName}</p>
+              <p className="text-slate-500">Current Price: {formatCurrency(item.price, item.currency)}</p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">New Unit Price ({item.currency})</label>
+              <Input
+                type="number"
+                step="0.01"
+                {...register('newPrice', { valueAsNumber: true })}
+              />
+              {errors.newPrice && (
+                <p className="text-xs text-red-600 font-medium">{errors.newPrice.message}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Updating...' : 'Save New Price'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

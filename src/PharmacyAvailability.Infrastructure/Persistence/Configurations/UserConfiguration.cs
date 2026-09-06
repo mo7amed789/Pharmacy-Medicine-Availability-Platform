@@ -32,7 +32,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(150);
 
         builder.Property(u => u.PhoneNumber)
+            .IsRequired()
             .HasMaxLength(50);
+
+        builder.HasIndex(u => u.PhoneNumber)
+            .HasDatabaseName("IX_Users_PhoneNumber");
 
         builder.Property(u => u.Role)
             .IsRequired()
@@ -44,6 +48,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsActive)
             .IsRequired()
             .HasDefaultValue(true);
+
+        builder.Property(u => u.IsEmailVerified)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(u => u.IsPhoneVerified)
+            .IsRequired()
+            .HasDefaultValue(false);
 
         builder.Property(u => u.CreatedAt)
             .HasColumnType("datetime2")

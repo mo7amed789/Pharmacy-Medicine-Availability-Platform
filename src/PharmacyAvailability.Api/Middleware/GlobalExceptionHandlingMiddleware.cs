@@ -76,7 +76,7 @@ public class GlobalExceptionHandlingMiddleware
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
 
-        var json = JsonSerializer.Serialize(problemDetails, JsonOptions);
+        var json = JsonSerializer.Serialize(problemDetails, problemDetails.GetType(), JsonOptions);
         await context.Response.WriteAsync(json);
     }
 
@@ -193,6 +193,84 @@ public class GlobalExceptionHandlingMiddleware
                     Title = "Invalid Request",
                     Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
                     Detail = badHttpEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
+            case FluentValidation.ValidationException fvEx:
+                var validationProblem = new HttpValidationProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "One or more validation errors occurred.",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                    Detail = "Please refer to the errors property for additional details.",
+                    Instance = context.Request.Path
+                };
+                foreach (var failure in fvEx.Errors)
+                {
+                    if (validationProblem.Errors.TryGetValue(failure.PropertyName, out var existingErrors))
+                    {
+                        validationProblem.Errors[failure.PropertyName] = existingErrors.Concat(new[] { failure.ErrorMessage }).ToArray();
+                    }
+                    else
+                    {
+                        validationProblem.Errors[failure.PropertyName] = new[] { failure.ErrorMessage };
+                    }
+                }
+                problem = validationProblem;
+                break;
+
+            case ForbiddenAccessException forbEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status403Forbidden,
+                    Title = "Forbidden",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.3",
+                    Detail = forbEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
+            case ArgumentException argEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "Invalid Argument",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                    Detail = argEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
+            case OperationCanceledException:
+                problem = new ProblemDetails
+                {
+                    Status = 499,
+                    Title = "Request Cancelled",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                    Detail = "The operation was cancelled by the client.",
+                    Instance = context.Request.Path
+                };
+                break;
+
+            case TimeoutException:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status504GatewayTimeout,
+                    Title = "Request Timeout",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.5",
+                    Detail = "The requested operation timed out while communicating with downstream services.",
+                    Instance = context.Request.Path
+                };
+                break;
+
+            case NotImplementedException:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status501NotImplemented,
+                    Title = "Not Implemented",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.2",
+                    Detail = "The requested feature or endpoint is not yet implemented.",
                     Instance = context.Request.Path
                 };
                 break;

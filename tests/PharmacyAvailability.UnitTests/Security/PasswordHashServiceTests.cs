@@ -11,7 +11,7 @@ public class PasswordHashServiceTests
     [Fact]
     public void HashPassword_ProducesNonEmptySecureHashDifferentFromPlaintext()
     {
-        var user = new User("user@example.com", "placeholder", "John", UserRole.Customer);
+        var user = new User("user@example.com", "placeholder", "John", UserRole.Customer, "+201012345678");
         var password = "SuperSecretPassword123!";
 
         var hash = _service.HashPassword(user, password);
@@ -23,7 +23,7 @@ public class PasswordHashServiceTests
     [Fact]
     public void VerifyPassword_CorrectPassword_ReturnsTrue()
     {
-        var user = new User("user@example.com", "placeholder", "John", UserRole.Customer);
+        var user = new User("user@example.com", "placeholder", "John", UserRole.Customer, "+201012345678");
         var password = "SuperSecretPassword123!";
         var hash = _service.HashPassword(user, password);
 
@@ -35,7 +35,7 @@ public class PasswordHashServiceTests
     [Fact]
     public void VerifyPassword_WrongPassword_ReturnsFalse()
     {
-        var user = new User("user@example.com", "placeholder", "John", UserRole.Customer);
+        var user = new User("user@example.com", "placeholder", "John", UserRole.Customer, "+201012345678");
         var password = "SuperSecretPassword123!";
         var hash = _service.HashPassword(user, password);
 

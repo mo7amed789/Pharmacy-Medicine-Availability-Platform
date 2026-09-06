@@ -8,11 +8,15 @@ public class User : BaseEntity
     public string Email { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public string FullName { get; private set; } = string.Empty;
-    public string? PhoneNumber { get; private set; }
+    public string PhoneNumber { get; private set; } = string.Empty;
     public UserRole Role { get; private set; }
     public Guid? PharmacyId { get; private set; }
     public bool IsActive { get; private set; } = true;
+    public bool IsEmailVerified { get; private set; } = false;
+    public bool IsPhoneVerified { get; private set; } = false;
     public DateTime? LastLoginAt { get; private set; }
+
+    public bool IsFullyVerified => IsEmailVerified && IsPhoneVerified;
 
     private readonly List<RefreshToken> _refreshTokens = new();
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
@@ -25,7 +29,7 @@ public class User : BaseEntity
         string passwordHash,
         string fullName,
         UserRole role,
-        string? phoneNumber = null,
+        string phoneNumber,
         Guid? pharmacyId = null)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -34,6 +38,8 @@ public class User : BaseEntity
             throw new DomainValidationException("Password hash is required.");
         if (string.IsNullOrWhiteSpace(fullName))
             throw new DomainValidationException("Full name is required.");
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new DomainValidationException("Phone number is required.");
 
         if ((role == UserRole.PharmacyAdmin || role == UserRole.PharmacyStaff) && !pharmacyId.HasValue)
         {
@@ -43,19 +49,43 @@ public class User : BaseEntity
         Email = email.Trim().ToLowerInvariant();
         PasswordHash = passwordHash;
         FullName = fullName.Trim();
-        PhoneNumber = phoneNumber?.Trim();
+        PhoneNumber = phoneNumber.Trim();
         Role = role;
         PharmacyId = pharmacyId;
         IsActive = true;
+        IsEmailVerified = false;
+        IsPhoneVerified = false;
     }
 
-    public void UpdateProfile(string fullName, string? phoneNumber)
+    public void VerifyEmail()
+    {
+        IsEmailVerified = true;
+    }
+
+    public void VerifyPhone()
+    {
+        IsPhoneVerified = true;
+    }
+
+    public void SetVerificationStatus(bool emailVerified, bool phoneVerified)
+    {
+        IsEmailVerified = emailVerified;
+        IsPhoneVerified = phoneVerified;
+    }
+
+    public void UpdateProfile(string fullName, string phoneNumber)
     {
         if (string.IsNullOrWhiteSpace(fullName))
             throw new DomainValidationException("Full name cannot be empty.");
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new DomainValidationException("Phone number cannot be empty.");
 
         FullName = fullName.Trim();
-        PhoneNumber = phoneNumber?.Trim();
+        if (PhoneNumber != phoneNumber.Trim())
+        {
+            PhoneNumber = phoneNumber.Trim();
+            IsPhoneVerified = false;
+        }
     }
 
     public void UpdatePassword(string newPasswordHash)

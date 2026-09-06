@@ -20,6 +20,49 @@ export class ApiError extends Error {
     this.correlationId = problem.correlationId;
     this.validationErrors = problem.errors;
   }
+
+  public getFieldError(field: string): string | undefined {
+    if (!this.validationErrors) return undefined;
+    const lower = field.toLowerCase();
+    for (const key of Object.keys(this.validationErrors)) {
+      if (key.toLowerCase() === lower) {
+        const msgs = this.validationErrors[key];
+        return msgs && msgs.length > 0 ? msgs[0] : undefined;
+      }
+    }
+    return undefined;
+  }
+
+  public getAllFieldErrors(): Record<string, string> {
+    if (!this.validationErrors) return {};
+    const result: Record<string, string> = {};
+    for (const [k, v] of Object.entries(this.validationErrors)) {
+      if (v && v.length > 0) {
+        result[k] = v[0];
+      }
+    }
+    return result;
+  }
+
+  public get isValidationError(): boolean {
+    return this.status === 400 && !!this.validationErrors && Object.keys(this.validationErrors).length > 0;
+  }
+
+  public get isNotFound(): boolean {
+    return this.status === 404;
+  }
+
+  public get isConflict(): boolean {
+    return this.status === 409;
+  }
+
+  public get isUnauthorized(): boolean {
+    return this.status === 401;
+  }
+
+  public get isForbidden(): boolean {
+    return this.status === 403;
+  }
 }
 
 export const apiClient = axios.create({
@@ -138,14 +181,26 @@ apiClient.interceptors.response.use(
     }
 
     // Map RFC 7807 ProblemDetails from ASP.NET Core response
-    const data = error.response.data;
+    const data = error.response.data as any;
+    let title = error.response.statusText || 'Error';
+    let detail = error.message;
+    let errors: Record<string, string[]> | undefined = undefined;
+
+    if (typeof data === 'string') {
+      detail = data;
+    } else if (data && typeof data === 'object') {
+      title = data.title || title;
+      detail = data.detail || data.title || detail;
+      errors = data.errors;
+    }
+
     const problem: ApiProblemDetails = {
       status: error.response.status,
-      title: data?.title || error.response.statusText || 'Error',
-      detail: data?.detail || data?.title || error.message,
-      instance: data?.instance,
-      correlationId: (error.response.headers['x-correlation-id'] as string) || data?.correlationId,
-      errors: data?.errors,
+      title,
+      detail,
+      instance: typeof data === 'object' ? data?.instance : undefined,
+      correlationId: (error.response.headers['x-correlation-id'] as string) || (typeof data === 'object' ? data?.correlationId : undefined),
+      errors,
     };
 
     return Promise.reject(new ApiError(problem));

@@ -33,7 +33,7 @@ public class OptimisticConcurrencyTests : IClassFixture<DatabaseFixture>
 
         var med = new Medicine($"Med_{Guid.NewGuid():N}", "Gen", "Act", "100mg", "Tablet", cat.Id, man.Id);
         var pharmacy = new Pharmacy($"Pharm_{Guid.NewGuid():N}", $"LIC_{Guid.NewGuid():N}", "Street", "City", new Coordinates(30.0, 31.0), "+201000000000");
-        var user = new User($"user_{Guid.NewGuid():N}@test.com", "hash", "Staff", UserRole.PlatformAdmin);
+        var user = new User($"user_{Guid.NewGuid():N}@test.com", "hash", "Staff", UserRole.PlatformAdmin, "+201000000000");
 
         var branch = pharmacy.AddBranch("Main Branch", "Street", "City", new Coordinates(30.0, 31.0), "+201000000000");
 

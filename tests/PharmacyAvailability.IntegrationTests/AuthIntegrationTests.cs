@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PharmacyAvailability.Contracts.Auth;
 using PharmacyAvailability.Domain.Identity;
@@ -23,11 +24,12 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
-    public async Task Register_Success_Returns201AndTokensWithCustomerRole()
+    public async Task Register_Success_Returns201AndTokensWithCustomerRoleAndUnverifiedStatus()
     {
         // Arrange
         var email = $"patient_{Guid.NewGuid():N}@test.com";
-        var request = new RegisterRequest(email, "SecurePassword123!", "Ahmed Ali", "+201012345678");
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var request = new RegisterRequest(email, "SecurePassword123!", "Ahmed Ali", phone);
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
@@ -40,8 +42,55 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
         Assert.False(string.IsNullOrWhiteSpace(auth.AccessToken));
         Assert.False(string.IsNullOrWhiteSpace(auth.RefreshToken));
         Assert.Equal(email.ToLowerInvariant(), auth.User.Email);
+        Assert.Equal(phone, auth.User.PhoneNumber);
         Assert.Equal("Customer", auth.User.Role);
         Assert.Null(auth.User.PharmacyId);
+        Assert.False(auth.User.IsEmailVerified);
+        Assert.False(auth.User.IsPhoneVerified);
+
+        // Verify verification codes were created in database
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+        var codes = await db.VerificationCodes.Where(vc => vc.UserId == auth.User.Id).ToListAsync();
+        Assert.Equal(2, codes.Count);
+        Assert.Contains(codes, c => c.Type == VerificationType.Email && !c.IsUsed);
+        Assert.Contains(codes, c => c.Type == VerificationType.Phone && !c.IsUsed);
+    }
+
+    [Fact]
+    public async Task Register_MissingPhone_Returns400BadRequest()
+    {
+        // Arrange
+        var email = $"patient_nophone_{Guid.NewGuid():N}@test.com";
+        var request = new RegisterRequest(email, "SecurePassword123!", "Ahmed Ali", "");
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Phone number is required", content);
+    }
+
+    [Fact]
+    public async Task Register_ValidationFailure_ReturnsValidationProblemDetailsWithFieldErrors()
+    {
+        // Arrange: Invalid email, short password, empty name, invalid phone
+        var request = new RegisterRequest("invalid-email", "short", "", "abc");
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal(400, problem.Status);
+        Assert.True(problem.Errors.ContainsKey("Email"));
+        Assert.True(problem.Errors.ContainsKey("Password"));
+        Assert.True(problem.Errors.ContainsKey("FullName"));
+        Assert.True(problem.Errors.ContainsKey("PhoneNumber"));
     }
 
     [Fact]
@@ -49,7 +98,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"duplicate_{Guid.NewGuid():N}@test.com";
-        var request = new RegisterRequest(email, "SecurePassword123!", "User One", null);
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var request = new RegisterRequest(email, "SecurePassword123!", "User One", phone);
 
         var first = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
@@ -67,7 +117,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     public async Task Register_WeakPassword_Returns400BadRequest()
     {
         // Arrange
-        var request = new RegisterRequest($"weak_{Guid.NewGuid():N}@test.com", "short", "Weak User", null);
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var request = new RegisterRequest($"weak_{Guid.NewGuid():N}@test.com", "short", "Weak User", phone);
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
@@ -79,12 +130,137 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    public async Task Verify_ValidEmailAndPhoneCodes_Succeeds()
+    {
+        // Arrange: Register customer
+        var email = $"verify_test_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, "SecurePassword123!", "Verify User", phone));
+        var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
+
+        // Retrieve the generated verification codes from DbContext
+        string emailCode;
+        string phoneCode;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var codes = await db.VerificationCodes.Where(vc => vc.UserId == auth!.User.Id).ToListAsync();
+            emailCode = codes.First(c => c.Type == VerificationType.Email).Code;
+            phoneCode = codes.First(c => c.Type == VerificationType.Phone).Code;
+        }
+
+        // Set authorization bearer
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        // Act 1: Verify Email
+        var emailVerifyResp = await client.PostAsJsonAsync("/api/v1/auth/verify", new VerifyCodeRequest("Email", emailCode));
+        Assert.Equal(HttpStatusCode.OK, emailVerifyResp.StatusCode);
+        var status1 = await emailVerifyResp.Content.ReadFromJsonAsync<VerificationStatusResponse>();
+        Assert.NotNull(status1);
+        Assert.True(status1.IsEmailVerified);
+        Assert.False(status1.IsPhoneVerified);
+
+        // Act 2: Verify Phone
+        var phoneVerifyResp = await client.PostAsJsonAsync("/api/v1/auth/verify", new VerifyCodeRequest("Phone", phoneCode));
+        Assert.Equal(HttpStatusCode.OK, phoneVerifyResp.StatusCode);
+        var status2 = await phoneVerifyResp.Content.ReadFromJsonAsync<VerificationStatusResponse>();
+        Assert.NotNull(status2);
+        Assert.True(status2.IsEmailVerified);
+        Assert.True(status2.IsPhoneVerified);
+
+        // Act 3: Check status endpoint
+        var statusEndpointResp = await client.GetAsync("/api/v1/auth/verify/status");
+        Assert.Equal(HttpStatusCode.OK, statusEndpointResp.StatusCode);
+        var finalStatus = await statusEndpointResp.Content.ReadFromJsonAsync<VerificationStatusResponse>();
+        Assert.NotNull(finalStatus);
+        Assert.True(finalStatus.IsEmailVerified);
+        Assert.True(finalStatus.IsPhoneVerified);
+    }
+
+    [Fact]
+    public async Task Verify_InvalidCode_Returns400BadRequest()
+    {
+        // Arrange
+        var email = $"verify_wrong_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, "SecurePassword123!", "Wrong Code User", phone));
+        var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/v1/auth/verify", new VerifyCodeRequest("Email", "000000"));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Invalid verification code", content);
+    }
+
+    [Fact]
+    public async Task Verify_ExpiredCode_Returns400BadRequest()
+    {
+        // Arrange
+        var email = $"verify_exp_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, "SecurePassword123!", "Expired Code User", phone));
+        var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
+
+        // Artificially expire the code in DbContext
+        string emailCode;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var code = await db.VerificationCodes.FirstAsync(vc => vc.UserId == auth!.User.Id && vc.Type == VerificationType.Email);
+            emailCode = code.Code;
+            // Set expiration to past via reflection/property since it has private set
+            typeof(VerificationCode).GetProperty("ExpiresAt")!.SetValue(code, DateTime.UtcNow.AddMinutes(-5));
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/v1/auth/verify", new VerifyCodeRequest("Email", emailCode));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("expired", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ResendVerification_Throttling_EnforcesCooldown()
+    {
+        // Arrange
+        var email = $"resend_test_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, "SecurePassword123!", "Resend User", phone));
+        var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        // Act: Attempt to resend immediately (registration just sent a code less than 60s ago)
+        var resendResp = await client.PostAsJsonAsync("/api/v1/auth/verify/resend", new SendVerificationRequest("Email"));
+
+        // Assert: Throttled by 60s cooldown
+        Assert.Equal(HttpStatusCode.BadRequest, resendResp.StatusCode);
+        var content = await resendResp.Content.ReadAsStringAsync();
+        Assert.Contains("Please wait", content);
+    }
+
+    [Fact]
     public async Task Login_Success_Returns200AndValidTokens()
     {
         // Arrange
         var email = $"login_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Test Login", null));
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Test Login", phone));
 
         // Act
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, password));
@@ -102,7 +278,8 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"login_fail_{Guid.NewGuid():N}@test.com";
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, "CorrectPassword123!", "User", null));
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, "CorrectPassword123!", "User", phone));
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, "WrongPassword123!"));
@@ -110,7 +287,6 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        // Verifies generic message to prevent account enumeration
         Assert.Contains("Invalid email or password", content);
     }
 
@@ -131,8 +307,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange: Register user, then deactivate via DbContext
         var email = $"deactivated_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Deactivated", null));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Deactivated", phone));
         var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         using (var scope = _factory.Services.CreateScope())
@@ -155,8 +332,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange: Register user, obtain refresh token, then deactivate the account
         var email = $"deact_refresh_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Deact User", null));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Deact User", phone));
         var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         using (var scope = _factory.Services.CreateScope())
@@ -179,8 +357,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"refresh_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Refresh User", null));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Refresh User", phone));
         var initialAuth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         // Act
@@ -204,8 +383,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"reuse_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Reuse User", null));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Reuse User", phone));
         var initialAuth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         // Rotate token once: initialAuth.RefreshToken is now revoked, newAuth.RefreshToken is active
@@ -228,8 +408,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"revoke_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Revoke User", null));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Revoke User", phone));
         var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         // Act: Logout / revoke token
@@ -246,8 +427,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"getme_{Guid.NewGuid():N}@test.com";
+        var phone = "+201099999999";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "GetMe User", "+201099999999"));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "GetMe User", phone));
         var auth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
@@ -262,6 +444,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
         Assert.NotNull(user);
         Assert.Equal(email.ToLowerInvariant(), user.Email);
         Assert.Equal("GetMe User", user.FullName);
+        Assert.Equal(phone, user.PhoneNumber);
+        Assert.False(user.IsEmailVerified);
+        Assert.False(user.IsPhoneVerified);
     }
 
     [Fact]
@@ -279,8 +464,9 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         // Arrange
         var email = $"concurrent_refresh_{Guid.NewGuid():N}@test.com";
+        var phone = $"+2010{Random.Shared.Next(10000000, 99999999)}";
         var password = "SecurePassword123!";
-        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Concurrent User", null));
+        var regResp = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest(email, password, "Concurrent User", phone));
         var initialAuth = await regResp.Content.ReadFromJsonAsync<AuthResponse>();
 
         // Act: Fire two simultaneous refresh requests using the exact same refresh token

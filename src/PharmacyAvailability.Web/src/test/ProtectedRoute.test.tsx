@@ -18,6 +18,7 @@ function TestRouteSetup({ allowedRoles }: { allowedRoles?: ('Customer' | 'Pharma
       />
       <Route path="/login" element={<div>Login Screen Destination</div>} />
       <Route path="/unauthorized" element={<div>Unauthorized Destination</div>} />
+      <Route path="/verify" element={<div>Verification Screen Destination</div>} />
     </Routes>
   );
 }
@@ -49,7 +50,7 @@ describe('ProtectedRoute Guard', () => {
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 
-  it('renders children when user role matches allowedRoles', () => {
+  it('redirects to /verify when user is authenticated but not fully verified', () => {
     useAuthStore.setState({
       isInitialized: true,
       isAuthenticated: true,
@@ -57,9 +58,35 @@ describe('ProtectedRoute Guard', () => {
         id: '123',
         email: 'customer@test.com',
         fullName: 'Test Customer',
-        phoneNumber: null,
+        phoneNumber: '+201000000000',
         role: 'Customer',
         pharmacyId: null,
+        isEmailVerified: false,
+        isPhoneVerified: false,
+      },
+    });
+
+    renderWithProviders(<TestRouteSetup allowedRoles={['Customer']} />, {
+      initialEntries: ['/protected'],
+    });
+
+    expect(screen.getByText('Verification Screen Destination')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+  });
+
+  it('renders children when user role matches allowedRoles and user is verified', () => {
+    useAuthStore.setState({
+      isInitialized: true,
+      isAuthenticated: true,
+      user: {
+        id: '123',
+        email: 'customer@test.com',
+        fullName: 'Test Customer',
+        phoneNumber: '+201000000000',
+        role: 'Customer',
+        pharmacyId: null,
+        isEmailVerified: true,
+        isPhoneVerified: true,
       },
     });
 
@@ -79,9 +106,11 @@ describe('ProtectedRoute Guard', () => {
         id: '123',
         email: 'customer@test.com',
         fullName: 'Test Customer',
-        phoneNumber: null,
+        phoneNumber: '+201000000000',
         role: 'Customer',
         pharmacyId: null,
+        isEmailVerified: true,
+        isPhoneVerified: true,
       },
     });
 

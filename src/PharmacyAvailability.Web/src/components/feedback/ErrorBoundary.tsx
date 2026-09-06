@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Props {
@@ -25,25 +25,43 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('Uncaught React Error:', error, errorInfo);
   }
 
+  private handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   private handleReload = () => {
     window.location.reload();
+  };
+
+  private handleGoHome = () => {
+    window.location.href = '/';
   };
 
   public render() {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4 shadow-xs">
             <AlertTriangle className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Application Error</h1>
-          <p className="mt-2 max-w-md text-sm text-slate-600">
-            {this.state.error?.message || 'An unexpected rendering error occurred.'}
+          <h1 className="text-2xl font-bold text-slate-900">Application Error Occurred</h1>
+          <p className="mt-2 max-w-lg text-sm text-slate-600">
+            {this.state.error?.message || 'An unexpected rendering error occurred within the interface.'}
           </p>
-          <Button onClick={this.handleReload} className="mt-6 flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Reload Application
-          </Button>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button onClick={this.handleReset} variant="outline" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </Button>
+            <Button onClick={this.handleReload} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Reload Page
+            </Button>
+            <Button onClick={this.handleGoHome} variant="secondary" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Go to Homepage
+            </Button>
+          </div>
         </div>
       );
     }
@@ -51,3 +69,4 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+

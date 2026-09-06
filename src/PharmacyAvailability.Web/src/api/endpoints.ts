@@ -5,6 +5,9 @@ export const ENDPOINTS = {
   AUTH_REFRESH: '/auth/refresh',
   AUTH_REVOKE: '/auth/revoke',
   AUTH_ME: '/auth/me',
+  AUTH_VERIFY: '/auth/verify',
+  AUTH_VERIFY_RESEND: '/auth/verify/resend',
+  AUTH_VERIFY_STATUS: '/auth/verify/status',
 
   // Availability (Public)
   AVAILABILITY_SEARCH: '/availability',

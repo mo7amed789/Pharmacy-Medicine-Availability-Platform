@@ -8,6 +8,7 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 // Auth Pages
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { RegisterPage } from '@/features/auth/pages/RegisterPage';
+import { VerificationPage } from '@/features/auth/pages/VerificationPage';
 import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
 
 // Customer Pages
@@ -42,6 +43,14 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'unauthorized', element: <UnauthorizedPage /> },
+      {
+        path: 'verify',
+        element: (
+          <ProtectedRoute requireVerified={false}>
+            <VerificationPage />
+          </ProtectedRoute>
+        ),
+      },
 
       // 1. Customer Routes (/customer/*)
       {

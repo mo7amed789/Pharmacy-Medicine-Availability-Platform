@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Clock } from 'lucide-react';
 import { adminApi } from '../api/adminApi';
 import { ReservationDto } from '@/types/reservations';
@@ -26,6 +28,11 @@ import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { formatDateTime } from '@/lib/formatters';
+import { ApiError } from '@/api/apiClient';
+import {
+  adminReleaseReservationSchema,
+  AdminReleaseReservationFormData,
+} from '@/lib/validations';
 
 export function AdminReservationsPage() {
   const queryClient = useQueryClient();
@@ -33,27 +40,10 @@ export function AdminReservationsPage() {
 
   // Release Modal
   const [releaseItem, setReleaseItem] = useState<ReservationDto | null>(null);
-  const [releaseReason, setReleaseReason] = useState('');
-  const [releaseError, setReleaseError] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-all-reservations', statusFilter],
     queryFn: () => adminApi.getAllReservations({ status: statusFilter || undefined, pageSize: 50 }),
-  });
-
-  const releaseMutation = useMutation({
-    mutationFn: () => {
-      if (!releaseItem) return Promise.reject('No reservation selected');
-      return adminApi.releaseReservation(releaseItem.id, { reason: releaseReason });
-    },
-    onSuccess: () => {
-      setReleaseItem(null);
-      setReleaseReason('');
-      queryClient.invalidateQueries({ queryKey: ['admin-all-reservations'] });
-    },
-    onError: (err: any) => {
-      setReleaseError(err?.detail || err?.message || 'Failed to release reservation.');
-    },
   });
 
   return (
@@ -163,11 +153,7 @@ export function AdminReservationsPage() {
                         size="sm"
                         variant="destructive"
                         className="h-7 px-2 text-xs"
-                        onClick={() => {
-                          setReleaseItem(res);
-                          setReleaseReason('');
-                          setReleaseError(null);
-                        }}
+                        onClick={() => setReleaseItem(res)}
                       >
                         Force Release
                       </Button>
@@ -181,54 +167,121 @@ export function AdminReservationsPage() {
       )}
 
       {/* Administrative Release Modal */}
-      <Dialog open={!!releaseItem} onOpenChange={() => setReleaseItem(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Administrative Reservation Release</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Forcibly release reserved stock back into available inventory with an audit log reason.
-            </DialogDescription>
-          </DialogHeader>
-
-          {releaseItem && (
-            <div className="space-y-4 py-2 text-xs">
-              {releaseError && (
-                <div className="rounded-md bg-red-50 p-2 text-red-700 border border-red-200">
-                  {releaseError}
-                </div>
-              )}
-
-              <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-1">
-                <p className="font-bold text-slate-900">{releaseItem.medicineBrandName}</p>
-                <p className="text-slate-500">
-                  Branch: {releaseItem.pharmacyName} — {releaseItem.branchName} • Units: {releaseItem.quantity}
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700 block">Release Audit Reason (Required)</label>
-                <Input
-                  value={releaseReason}
-                  onChange={(e) => setReleaseReason(e.target.value)}
-                  placeholder="e.g. Pharmacy branch closed unexpectedly / customer dispute"
-                  required
-                />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReleaseItem(null)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              disabled={!releaseReason.trim() || releaseMutation.isPending}
-              onClick={() => releaseMutation.mutate()}
-            >
-              {releaseMutation.isPending ? 'Releasing...' : 'Confirm Force Release'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ReleaseReservationDialog
+        item={releaseItem}
+        onClose={() => setReleaseItem(null)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin-all-reservations'] });
+        }}
+      />
     </div>
+  );
+}
+
+interface ReleaseReservationDialogProps {
+  item: ReservationDto | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function ReleaseReservationDialog({ item, onClose, onSuccess }: ReleaseReservationDialogProps) {
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<AdminReleaseReservationFormData>({
+    resolver: zodResolver(adminReleaseReservationSchema),
+    defaultValues: {
+      reason: '',
+    },
+  });
+
+  useEffect(() => {
+    if (item) {
+      reset({ reason: '' });
+      setServerError(null);
+    }
+  }, [item, reset]);
+
+  const onSubmit = async (values: AdminReleaseReservationFormData) => {
+    if (!item) return;
+    setServerError(null);
+
+    try {
+      await adminApi.releaseReservation(item.id, { reason: values.reason });
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.isValidationError) {
+          const fieldErrors = err.getAllFieldErrors();
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            const camelKey = (field.charAt(0).toLowerCase() + field.slice(1)) as keyof AdminReleaseReservationFormData;
+            setError(camelKey, { message });
+          });
+        }
+        setServerError(err.detail || err.title);
+      } else if (err instanceof Error) {
+        setServerError(err.message);
+      } else {
+        setServerError('Failed to release reservation.');
+      }
+    }
+  };
+
+  return (
+    <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-slate-900">Administrative Reservation Release</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
+            Forcibly release reserved stock back into available inventory with an audit log reason.
+          </DialogDescription>
+        </DialogHeader>
+
+        {item && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2 text-xs">
+            {serverError && (
+              <div className="rounded-md bg-red-50 p-2 text-red-700 border border-red-200">
+                {serverError}
+              </div>
+            )}
+
+            <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 space-y-1">
+              <p className="font-bold text-slate-900">{item.medicineBrandName}</p>
+              <p className="text-slate-500">
+                Branch: {item.pharmacyName} — {item.branchName} • Units: {item.quantity}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700 block">Release Audit Reason (Required)</label>
+              <Input
+                {...register('reason')}
+                placeholder="e.g. Pharmacy branch closed unexpectedly / customer dispute"
+              />
+              {errors.reason && (
+                <p className="text-xs text-red-600 font-medium">{errors.reason.message}</p>
+              )}
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Releasing...' : 'Confirm Force Release'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -69,15 +69,17 @@ public class PharmacyService : IPharmacyService
         _context.Pharmacies.Add(pharmacy);
 
         // Create initial pharmacy administrator user
-        var dummyAdmin = new User(normEmail, "temp", request.AdminFullName, UserRole.PharmacyAdmin, request.AdminPhone, pharmacy.Id);
+        var adminPhone = string.IsNullOrWhiteSpace(request.AdminPhone) ? request.Phone : request.AdminPhone;
+        var dummyAdmin = new User(normEmail, "temp", request.AdminFullName, UserRole.PharmacyAdmin, adminPhone, pharmacy.Id);
         var passwordHash = _passwordHasher.HashPassword(dummyAdmin, request.AdminPassword);
         var adminUser = new User(
             normEmail,
             passwordHash,
             request.AdminFullName,
             UserRole.PharmacyAdmin,
-            request.AdminPhone,
+            adminPhone,
             pharmacy.Id);
+        adminUser.SetVerificationStatus(true, true);
 
         _context.Users.Add(adminUser);
 
@@ -303,7 +305,8 @@ public class PharmacyService : IPharmacyService
         if (await _context.Users.AnyAsync(u => u.Email == normEmail, ct))
             throw new DomainValidationException($"Email '{normEmail}' is already registered.");
 
-        var dummyUser = new User(normEmail, "temp", request.FullName, role, request.PhoneNumber, pharmacyId);
+        var staffPhone = !string.IsNullOrWhiteSpace(request.PhoneNumber) ? request.PhoneNumber : pharmacy.Phone;
+        var dummyUser = new User(normEmail, "temp", request.FullName, role, staffPhone, pharmacyId);
         var passwordHash = _passwordHasher.HashPassword(dummyUser, request.Password);
 
         var user = new User(
@@ -311,8 +314,9 @@ public class PharmacyService : IPharmacyService
             passwordHash,
             request.FullName,
             role,
-            request.PhoneNumber,
+            staffPhone,
             pharmacyId);
+        user.SetVerificationStatus(true, true);
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync(ct);

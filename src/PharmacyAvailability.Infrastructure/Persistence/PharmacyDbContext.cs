@@ -39,6 +39,7 @@ public class PharmacyDbContext : DbContext
     public DbSet<PharmacyProductMapping> PharmacyProductMappings => Set<PharmacyProductMapping>();
     public DbSet<InventorySyncLog> InventorySyncLogs => Set<InventorySyncLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<VerificationCode> VerificationCodes => Set<VerificationCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

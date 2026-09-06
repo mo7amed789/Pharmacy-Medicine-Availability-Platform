@@ -25,6 +25,10 @@ using PharmacyAvailability.Infrastructure.Reservations;
 using PharmacyAvailability.Infrastructure.Persistence;
 using PharmacyAvailability.Api.BackgroundServices;
 using PharmacyAvailability.Infrastructure.Security;
+using PharmacyAvailability.Api;
+using FluentValidation;
+using PharmacyAvailability.Api.Filters;
+using PharmacyAvailability.Application.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +53,7 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptio
 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IVerificationSender, DevelopmentVerificationSender>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
@@ -144,8 +149,13 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 8. Controllers & Swagger
-builder.Services.AddControllers();
+// 8. Validation & Controllers
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -168,9 +178,8 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 
 // F. CORS
 app.UseCors("CorsPolicy");
@@ -201,6 +210,20 @@ app.MapGet("/health", () => Results.Ok(new
     service = "Pharmacy Availability API",
     timestamp = DateTime.UtcNow
 }));
+
+// K. Development Data Seeding
+if (app.Environment.IsDevelopment())
+{
+    using var seedScope = app.Services.CreateScope();
+    var seedDb = seedScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+    var seedHasher = seedScope.ServiceProvider.GetRequiredService<IPasswordHashService>();
+    var seedLogger = seedScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    // Ensure database is created and migrations are applied
+    await seedDb.Database.MigrateAsync();
+
+    await DevelopmentDataSeeder.SeedAsync(seedDb, seedHasher, seedLogger);
+}
 
 app.Run();
 

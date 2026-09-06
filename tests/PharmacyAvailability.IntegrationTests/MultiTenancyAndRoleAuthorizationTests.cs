@@ -50,7 +50,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
     {
         // Arrange
         var (pharmacyA, _) = await CreatePharmaciesAsync();
-        var customer = new User("cust@test.com", "hash", "Customer", UserRole.Customer);
+        var customer = new User("cust@test.com", "hash", "Customer", UserRole.Customer, "+201012345678");
         var token = CreateTokenForUser(customer);
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyA.Id}/access-check");
@@ -122,7 +122,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
     {
         // Arrange: Platform Admin with global oversight
         var (pharmacyA, pharmacyB) = await CreatePharmaciesAsync();
-        var superAdmin = new User("super@platform.com", "hash", "Super Admin", UserRole.PlatformAdmin);
+        var superAdmin = new User("super@platform.com", "hash", "Super Admin", UserRole.PlatformAdmin, "+201000000001");
         var token = CreateTokenForUser(superAdmin);
 
         var requestA = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{pharmacyA.Id}/access-check");
@@ -160,7 +160,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
     public async Task PlatformAdminCheck_PlatformAdmin_Returns200Ok()
     {
         // Arrange
-        var superAdmin = new User("super@platform.com", "hash", "Super Admin", UserRole.PlatformAdmin);
+        var superAdmin = new User("super@platform.com", "hash", "Super Admin", UserRole.PlatformAdmin, "+201000000001");
         var token = CreateTokenForUser(superAdmin);
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/test/admin/platform-check");
@@ -197,7 +197,7 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
         // Act & Assert: In production, PharmacyAccessTestController endpoints are strictly blocked with 404 even if valid token is provided
         using var scope = prodFactory.Services.CreateScope();
         var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
-        var (token, _) = tokenService.GenerateAccessToken(new User("admin@test.com", "hash", "Admin", UserRole.PlatformAdmin));
+        var (token, _) = tokenService.GenerateAccessToken(new User("admin@test.com", "hash", "Admin", UserRole.PlatformAdmin, "+201000000001"));
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"/api/test/pharmacies/{Guid.NewGuid()}/access-check");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

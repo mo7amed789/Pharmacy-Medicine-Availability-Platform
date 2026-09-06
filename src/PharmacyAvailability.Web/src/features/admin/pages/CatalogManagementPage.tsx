@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { BookOpen, Plus, Barcode, Search } from 'lucide-react';
 import { adminApi } from '../api/adminApi';
 import { customerApi } from '@/features/customer/api/customerApi';
-import { MedicineDto, ManufacturerDto } from '@/types/catalog';
+import { MedicineDto, ManufacturerDto, CategoryDto } from '@/types/catalog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +27,8 @@ import {
 import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { ApiError } from '@/api/apiClient';
+import { medicineSchema, MedicineFormData } from '@/lib/validations';
 
 export function CatalogManagementPage() {
   const queryClient = useQueryClient();
@@ -32,15 +36,6 @@ export function CatalogManagementPage() {
 
   // Create Medicine State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [brandName, setBrandName] = useState('');
-  const [genericName, setGenericName] = useState('');
-  const [activeIngredient, setActiveIngredient] = useState('');
-  const [strength, setStrength] = useState('');
-  const [dosageForm, setDosageForm] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [manufacturerId, setManufacturerId] = useState('');
-  const [requiresPrescription, setRequiresPrescription] = useState(false);
-  const [initialBarcode, setInitialBarcode] = useState('');
 
   // Add Barcode State
   const [barcodeMedicine, setBarcodeMedicine] = useState<MedicineDto | null>(null);
@@ -70,31 +65,6 @@ export function CatalogManagementPage() {
     queryFn: async () => {
       const res = await fetch(`/api/v1/medicines?searchTerm=${encodeURIComponent(searchTerm)}&pageSize=50`);
       return res.json() as Promise<{ items: MedicineDto[]; totalCount: number }>;
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: () =>
-      adminApi.createMedicine({
-        brandName,
-        genericName,
-        activeIngredient,
-        strength,
-        dosageForm,
-        categoryId,
-        manufacturerId,
-        requiresPrescription,
-        initialBarcode: initialBarcode || null,
-      }),
-    onSuccess: () => {
-      setIsCreateOpen(false);
-      setBrandName('');
-      setGenericName('');
-      setActiveIngredient('');
-      setStrength('');
-      setDosageForm('');
-      setInitialBarcode('');
-      queryClient.invalidateQueries({ queryKey: ['admin-medicines-search'] });
     },
   });
 
@@ -236,105 +206,13 @@ export function CatalogManagementPage() {
       )}
 
       {/* Create Medicine Modal */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Add Medicine to Central Catalog</DialogTitle>
-          </DialogHeader>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              createMutation.mutate();
-            }}
-            className="space-y-3 py-2 text-xs"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Brand Name</label>
-                <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Panadol Extra" required />
-              </div>
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Generic Name</label>
-                <Input value={genericName} onChange={(e) => setGenericName(e.target.value)} placeholder="Paracetamol" required />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Active Ingredient</label>
-                <Input value={activeIngredient} onChange={(e) => setActiveIngredient(e.target.value)} placeholder="Paracetamol 500mg" required />
-              </div>
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Strength</label>
-                <Input value={strength} onChange={(e) => setStrength(e.target.value)} placeholder="500mg" required />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Dosage Form</label>
-                <Input value={dosageForm} onChange={(e) => setDosageForm(e.target.value)} placeholder="Tablet" required />
-              </div>
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Initial Barcode</label>
-                <Input value={initialBarcode} onChange={(e) => setInitialBarcode(e.target.value)} placeholder="622123456789" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Category</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {(categories || []).map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Manufacturer</label>
-                <select
-                  value={manufacturerId}
-                  onChange={(e) => setManufacturerId(e.target.value)}
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs"
-                  required
-                >
-                  <option value="">Select Manufacturer</option>
-                  {(manufacturers || []).map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="prescription"
-                checked={requiresPrescription}
-                onChange={(e) => setRequiresPrescription(e.target.checked)}
-                className="rounded text-blue-600"
-              />
-              <label htmlFor="prescription" className="text-slate-700 font-medium">
-                Requires Prescription (Rx)
-              </label>
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Saving...' : 'Save to Catalog'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CreateMedicineDialog
+        isOpen={isCreateOpen}
+        categories={categories || []}
+        manufacturers={manufacturers || []}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['admin-medicines-search'] })}
+      />
 
       {/* Barcodes and Aliases Modal */}
       <Dialog open={!!barcodeMedicine} onOpenChange={() => setBarcodeMedicine(null)}>
@@ -423,5 +301,188 @@ export function CatalogManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+interface CreateMedicineDialogProps {
+  isOpen: boolean;
+  categories: CategoryDto[];
+  manufacturers: ManufacturerDto[];
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function CreateMedicineDialog({ isOpen, categories, manufacturers, onClose, onSuccess }: CreateMedicineDialogProps) {
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<MedicineFormData>({
+    resolver: zodResolver(medicineSchema),
+    defaultValues: {
+      brandName: '',
+      genericName: '',
+      activeIngredient: '',
+      strength: '',
+      dosageForm: '',
+      categoryId: '',
+      manufacturerId: '',
+      requiresPrescription: false,
+      initialBarcode: '',
+    },
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        brandName: '',
+        genericName: '',
+        activeIngredient: '',
+        strength: '',
+        dosageForm: '',
+        categoryId: '',
+        manufacturerId: '',
+        requiresPrescription: false,
+        initialBarcode: '',
+      });
+      setServerError(null);
+    }
+  }, [isOpen, reset]);
+
+  const onSubmit = async (values: MedicineFormData) => {
+    setServerError(null);
+
+    try {
+      await adminApi.createMedicine({
+        ...values,
+        initialBarcode: values.initialBarcode || null,
+      });
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.isValidationError) {
+          const fieldErrors = err.getAllFieldErrors();
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            const camelKey = (field.charAt(0).toLowerCase() + field.slice(1)) as keyof MedicineFormData;
+            setError(camelKey, { message });
+          });
+        }
+        setServerError(err.detail || err.title);
+      } else if (err instanceof Error) {
+        setServerError(err.message);
+      } else {
+        setServerError('Failed to create medicine.');
+      }
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-slate-900">Add Medicine to Central Catalog</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 py-2 text-xs">
+          {serverError && (
+            <div className="rounded-md bg-red-50 p-2.5 text-xs text-red-700 border border-red-200">
+              {serverError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Brand Name</label>
+              <Input {...register('brandName')} placeholder="Panadol Extra" />
+              {errors.brandName && <p className="text-[11px] text-red-600 mt-0.5">{errors.brandName.message}</p>}
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Generic Name</label>
+              <Input {...register('genericName')} placeholder="Paracetamol" />
+              {errors.genericName && <p className="text-[11px] text-red-600 mt-0.5">{errors.genericName.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Active Ingredient</label>
+              <Input {...register('activeIngredient')} placeholder="Paracetamol 500mg" />
+              {errors.activeIngredient && <p className="text-[11px] text-red-600 mt-0.5">{errors.activeIngredient.message}</p>}
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Strength</label>
+              <Input {...register('strength')} placeholder="500mg" />
+              {errors.strength && <p className="text-[11px] text-red-600 mt-0.5">{errors.strength.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Dosage Form</label>
+              <Input {...register('dosageForm')} placeholder="Tablet" />
+              {errors.dosageForm && <p className="text-[11px] text-red-600 mt-0.5">{errors.dosageForm.message}</p>}
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Initial Barcode</label>
+              <Input {...register('initialBarcode')} placeholder="622123456789" />
+              {errors.initialBarcode && <p className="text-[11px] text-red-600 mt-0.5">{errors.initialBarcode.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Category</label>
+              <select
+                {...register('categoryId')}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs"
+              >
+                <option value="">Select Category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              {errors.categoryId && <p className="text-[11px] text-red-600 mt-0.5">{errors.categoryId.message}</p>}
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">Manufacturer</label>
+              <select
+                {...register('manufacturerId')}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs"
+              >
+                <option value="">Select Manufacturer</option>
+                {manufacturers.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              {errors.manufacturerId && <p className="text-[11px] text-red-600 mt-0.5">{errors.manufacturerId.message}</p>}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              type="checkbox"
+              id="prescription"
+              {...register('requiresPrescription')}
+              className="rounded text-blue-600"
+            />
+            <label htmlFor="prescription" className="text-slate-700 font-medium">
+              Requires Prescription (Rx)
+            </label>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save to Catalog'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Users, UserPlus, Phone } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { pharmacyOpsApi } from '../api/pharmacyOpsApi';
@@ -26,6 +28,8 @@ import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { formatDateTime } from '@/lib/formatters';
+import { ApiError } from '@/api/apiClient';
+import { inviteStaffSchema, InviteStaffFormData } from '@/lib/validations';
 
 export function StaffManagementPage() {
   const { user } = useAuthStore();
@@ -33,12 +37,24 @@ export function StaffManagementPage() {
   const pharmacyId = user?.pharmacyId;
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [role, setRole] = useState('PharmacyStaff');
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<InviteStaffFormData>({
+    resolver: zodResolver(inviteStaffSchema),
+    defaultValues: {
+      fullName: '',
+      email: '',
+      password: '',
+      phoneNumber: '',
+      role: 'PharmacyStaff',
+    },
+  });
 
   const { data: staff, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['pharmacy-staff', pharmacyId],
@@ -46,29 +62,35 @@ export function StaffManagementPage() {
     enabled: !!pharmacyId,
   });
 
-  const inviteMutation = useMutation({
-    mutationFn: async () => {
-      if (!pharmacyId) return;
-      return pharmacyOpsApi.inviteStaff(pharmacyId, {
-        fullName,
-        email,
-        password,
-        phoneNumber: phoneNumber || null,
-        role,
+  const onInviteSubmit = async (values: InviteStaffFormData) => {
+    if (!pharmacyId) return;
+    setInviteError(null);
+
+    try {
+      await pharmacyOpsApi.inviteStaff(pharmacyId, {
+        ...values,
+        phoneNumber: values.phoneNumber || null,
       });
-    },
-    onSuccess: () => {
       setIsInviteOpen(false);
-      setFullName('');
-      setEmail('');
-      setPassword('');
-      setPhoneNumber('');
+      reset();
       queryClient.invalidateQueries({ queryKey: ['pharmacy-staff'] });
-    },
-    onError: (err: any) => {
-      setInviteError(err?.detail || err?.message || 'Failed to add staff member.');
-    },
-  });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.isValidationError) {
+          const fieldErrors = err.getAllFieldErrors();
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            const camelKey = (field.charAt(0).toLowerCase() + field.slice(1)) as keyof InviteStaffFormData;
+            setError(camelKey, { message });
+          });
+        }
+        setInviteError(err.detail || err.title || 'Failed to add staff member.');
+      } else if (err instanceof Error) {
+        setInviteError(err.message);
+      } else {
+        setInviteError('Failed to add staff member.');
+      }
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -166,79 +188,80 @@ export function StaffManagementPage() {
             <DialogTitle className="text-lg font-bold text-slate-900">Add Staff Member</DialogTitle>
           </DialogHeader>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              inviteMutation.mutate();
-            }}
-            className="space-y-4 py-2"
-          >
+          <form onSubmit={handleSubmit(onInviteSubmit)} className="space-y-4 py-2">
             {inviteError && (
               <div className="rounded-md bg-red-50 p-3 text-xs text-red-700 border border-red-200">
                 {inviteError}
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Full Name</label>
               <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                {...register('fullName')}
                 placeholder="Dr. Ahmed Hassan"
-                required
               />
+              {errors.fullName && (
+                <p className="text-xs text-red-600 font-medium">{errors.fullName.message}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Email Address</label>
               <Input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register('email')}
                 placeholder="ahmed@pharmacy.com"
-                required
               />
+              {errors.email && (
+                <p className="text-xs text-red-600 font-medium">{errors.email.message}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Initial Password</label>
               <Input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register('password')}
                 placeholder="Minimum 8 characters"
-                required
               />
+              {errors.password && (
+                <p className="text-xs text-red-600 font-medium">{errors.password.message}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Phone Number (Optional)</label>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Phone Number</label>
               <Input
                 type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+20 100 000 0000"
+                {...register('phoneNumber')}
+                placeholder="+201000000000"
               />
+              {errors.phoneNumber && (
+                <p className="text-xs text-red-600 font-medium">{errors.phoneNumber.message}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Role</label>
               <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
+                {...register('role')}
                 className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-800"
               >
                 <option value="PharmacyStaff">PharmacyStaff (Fulfillment & Queue)</option>
                 <option value="PharmacyAdmin">PharmacyAdmin (Full Branch & Stock Control)</option>
               </select>
+              {errors.role && (
+                <p className="text-xs text-red-600 font-medium">{errors.role.message}</p>
+              )}
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsInviteOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={inviteMutation.isPending}>
-                {inviteMutation.isPending ? 'Adding...' : 'Create Account'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Adding...' : 'Create Account'}
               </Button>
             </DialogFooter>
           </form>
