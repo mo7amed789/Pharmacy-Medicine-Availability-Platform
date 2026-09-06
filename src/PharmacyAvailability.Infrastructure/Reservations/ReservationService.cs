@@ -137,11 +137,22 @@ public class ReservationService : IReservationService
         {
             using var expireTx = await _context.Database.BeginTransactionAsync(ct);
             reservation.Expire();
-            inventory.ReleaseReservation(
-                reservation.Quantity,
-                customerId,
-                $"Reservation {reservation.Id} expired automatically at cancellation attempt",
-                InventoryAdjustmentReason.ReservationExpired);
+            if (inventory.ReservedQuantity >= reservation.Quantity)
+            {
+                inventory.ReleaseReservation(
+                    reservation.Quantity,
+                    customerId,
+                    $"Reservation {reservation.Id} expired automatically at cancellation attempt",
+                    InventoryAdjustmentReason.ReservationExpired);
+            }
+            else if (inventory.ReservedQuantity > 0)
+            {
+                inventory.ReleaseReservation(
+                    inventory.ReservedQuantity,
+                    customerId,
+                    $"Reservation {reservation.Id} expired automatically at cancellation attempt",
+                    InventoryAdjustmentReason.ReservationExpired);
+            }
             await _context.SaveChangesAsync(ct);
             await expireTx.CommitAsync(ct);
 
@@ -206,11 +217,22 @@ public class ReservationService : IReservationService
         {
             using var expireTx = await _context.Database.BeginTransactionAsync(ct);
             reservation.Expire();
-            inventory.ReleaseReservation(
-                reservation.Quantity,
-                staffUserId,
-                $"Reservation {reservation.Id} expired automatically at confirmation attempt",
-                InventoryAdjustmentReason.ReservationExpired);
+            if (inventory.ReservedQuantity >= reservation.Quantity)
+            {
+                inventory.ReleaseReservation(
+                    reservation.Quantity,
+                    staffUserId,
+                    $"Reservation {reservation.Id} expired automatically at confirmation attempt",
+                    InventoryAdjustmentReason.ReservationExpired);
+            }
+            else if (inventory.ReservedQuantity > 0)
+            {
+                inventory.ReleaseReservation(
+                    inventory.ReservedQuantity,
+                    staffUserId,
+                    $"Reservation {reservation.Id} expired automatically at confirmation attempt",
+                    InventoryAdjustmentReason.ReservationExpired);
+            }
             await _context.SaveChangesAsync(ct);
             await expireTx.CommitAsync(ct);
 
@@ -270,11 +292,22 @@ public class ReservationService : IReservationService
         {
             using var expireTx = await _context.Database.BeginTransactionAsync(ct);
             reservation.Expire();
-            inventory.ReleaseReservation(
-                reservation.Quantity,
-                adminUserId,
-                $"Reservation {reservation.Id} expired automatically at admin release attempt",
-                InventoryAdjustmentReason.ReservationExpired);
+            if (inventory.ReservedQuantity >= reservation.Quantity)
+            {
+                inventory.ReleaseReservation(
+                    reservation.Quantity,
+                    adminUserId,
+                    $"Reservation {reservation.Id} expired automatically at admin release attempt",
+                    InventoryAdjustmentReason.ReservationExpired);
+            }
+            else if (inventory.ReservedQuantity > 0)
+            {
+                inventory.ReleaseReservation(
+                    inventory.ReservedQuantity,
+                    adminUserId,
+                    $"Reservation {reservation.Id} expired automatically at admin release attempt",
+                    InventoryAdjustmentReason.ReservationExpired);
+            }
             await _context.SaveChangesAsync(ct);
             await expireTx.CommitAsync(ct);
 
@@ -433,23 +466,51 @@ public class ReservationService : IReservationService
             {
                 using var tx = await _context.Database.BeginTransactionAsync(ct);
 
+                r.Expire();
+
                 var inventory = await _context.PharmacyInventories
                     .FirstOrDefaultAsync(pi => pi.BranchId == r.BranchId && pi.MedicineId == r.MedicineId, ct);
 
                 if (inventory != null)
                 {
-                    r.Expire();
+                    if (inventory.ReservedQuantity >= r.Quantity)
+                    {
+                        inventory.ReleaseReservation(
+                            r.Quantity,
+                            systemUser.Id,
+                            $"Reservation {r.Id} expired automatically by system",
+                            InventoryAdjustmentReason.ReservationExpired);
+                    }
+                    else if (inventory.ReservedQuantity > 0)
+                    {
+                        var actualRelease = inventory.ReservedQuantity;
+                        inventory.ReleaseReservation(
+                            actualRelease,
+                            systemUser.Id,
+                            $"Reservation {r.Id} expired (partial release {actualRelease} of {r.Quantity} due to inventory discrepancy)",
+                            InventoryAdjustmentReason.ReservationExpired);
 
-                    inventory.ReleaseReservation(
-                        r.Quantity,
-                        systemUser.Id,
-                        $"Reservation {r.Id} expired automatically by system",
-                        InventoryAdjustmentReason.ReservationExpired);
-
-                    await _context.SaveChangesAsync(ct);
-                    await tx.CommitAsync(ct);
-                    expiredCount++;
+                        _logger.LogWarning(
+                            "Reservation {ReservationId} requested release of {Quantity} units, but only {ReservedQuantity} was reserved in inventory {InventoryId}. Partial release executed.",
+                            r.Id, r.Quantity, actualRelease, inventory.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Reservation {ReservationId} expired with quantity {Quantity}, but inventory {InventoryId} has 0 reserved units. Reservation marked Expired without inventory release.",
+                            r.Id, r.Quantity, inventory.Id);
+                    }
                 }
+                else
+                {
+                    _logger.LogWarning(
+                        "Reservation {ReservationId} expired with quantity {Quantity}, but inventory for Branch {BranchId} and Medicine {MedicineId} was not found. Reservation marked Expired.",
+                        r.Id, r.Quantity, r.BranchId, r.MedicineId);
+                }
+
+                await _context.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+                expiredCount++;
             }
             catch (Exception ex)
             {

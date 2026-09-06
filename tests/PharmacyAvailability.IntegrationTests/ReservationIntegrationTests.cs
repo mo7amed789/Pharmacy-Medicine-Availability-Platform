@@ -417,6 +417,45 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    public async Task ExpireOverdueReservations_WhenReservedQuantityIsZero_TransitionsToExpiredWithoutCrashing()
+    {
+        // Arrange
+        var (pharmacy, branch, medicine, _) = await SeedInventoryAsync(availableQuantity: 20);
+        var (_, customer) = CreateTokenAndUser(UserRole.Customer);
+
+        Guid resId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            // Reservation created with quantity 2, but inventory has 0 reserved units (simulating data discrepancy)
+            var res = new Reservation(customer.Id, pharmacy.Id, branch.Id, medicine.Id, 2, DateTime.UtcNow.AddMinutes(30));
+            typeof(Reservation).GetProperty("CreatedAt")!.SetValue(res, DateTime.UtcNow.AddMinutes(-60));
+            typeof(Reservation).GetProperty("ExpiresAt")!.SetValue(res, DateTime.UtcNow.AddMinutes(-10));
+            db.Reservations.Add(res);
+            await db.SaveChangesAsync();
+            resId = res.Id;
+        }
+
+        // Act: Run expiration sweep
+        using (var sweepScope = _factory.Services.CreateScope())
+        {
+            var sweepService = sweepScope.ServiceProvider.GetRequiredService<IReservationService>();
+            var count = await sweepService.ExpireOverdueReservationsAsync();
+            Assert.True(count >= 1);
+        }
+
+        // Assert: Reservation transitioned to Expired without throwing DomainValidationException
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var db = verifyScope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var verifiedRes = await db.Reservations.FindAsync(resId);
+            Assert.NotNull(verifiedRes);
+            Assert.Equal(ReservationStatus.Expired, verifiedRes.Status);
+            Assert.NotNull(verifiedRes.ExpiredAt);
+        }
+    }
+
+    [Fact]
     public async Task ConcurrentReservations_SimultaneousRequests_PreventsOverselling()
     {
         // Arrange: 5 available units

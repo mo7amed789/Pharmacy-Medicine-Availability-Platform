@@ -109,6 +109,8 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var trackedInv = await db.PharmacyInventories.FindAsync(inv.Id);
+            trackedInv!.Reserve(2, customer.Id, "Test dashboard active holds");
 
             // Active reservation expiring in 20 minutes (expiring soon)
             var resExpiringSoon = new Reservation(
@@ -153,7 +155,7 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
     public async Task GetStaffReservationQueue_CustomerSearch_FindsByPhoneOrName()
     {
         // Arrange
-        var (pharmacy, branch, medicine, _) = await SeedBranchDataAsync(availableQuantity: 20);
+        var (pharmacy, branch, medicine, inv) = await SeedBranchDataAsync(availableQuantity: 20);
         var (staffToken, _) = CreateTokenAndUser(UserRole.PharmacyStaff, pharmacy.Id);
 
         var targetPhone = "01099887766";
@@ -163,6 +165,9 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var trackedInv = await db.PharmacyInventories.FindAsync(inv.Id);
+            trackedInv!.Reserve(3, custA.Id, "Search test holds");
+
             var resA = new Reservation(custA.Id, pharmacy.Id, branch.Id, medicine.Id, 2, DateTime.UtcNow.AddHours(2));
             var resB = new Reservation(custB.Id, pharmacy.Id, branch.Id, medicine.Id, 1, DateTime.UtcNow.AddHours(2));
             db.Reservations.AddRange(resA, resB);
@@ -197,19 +202,35 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
         Assert.NotNull(resultName);
         Assert.Single(resultName.Items);
         Assert.Equal(custB.Id, resultName.Items[0].CustomerId);
+
+        // Act 3: Search by medicine brand name
+        var reqMed = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/v1/pharmacies/{pharmacy.Id}/branches/{branch.Id}/operations/reservations/queue?search={medicine.BrandName}");
+        reqMed.Headers.Authorization = new AuthenticationHeaderValue("Bearer", staffToken);
+        var respMed = await _client.SendAsync(reqMed);
+
+        // Assert 3
+        Assert.Equal(HttpStatusCode.OK, respMed.StatusCode);
+        var resultMed = await respMed.Content.ReadFromJsonAsync<PagedResult<StaffReservationQueueItemDto>>();
+        Assert.NotNull(resultMed);
+        Assert.True(resultMed.Items.Count >= 2);
     }
 
     [Fact]
-    public async Task GetStaffReservationQueue_ExpiringSoonOnly_ReturnsUrgentHolds()
+    public async Task GetStaffReservationQueue_ExpiringSoonFilter_OnlyReturnsUrgentItems()
     {
         // Arrange
-        var (pharmacy, branch, medicine, _) = await SeedBranchDataAsync(availableQuantity: 20);
+        var (pharmacy, branch, medicine, inv) = await SeedBranchDataAsync(availableQuantity: 20);
         var (staffToken, _) = CreateTokenAndUser(UserRole.PharmacyStaff, pharmacy.Id);
         var (_, customer) = CreateTokenAndUser(UserRole.Customer);
 
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var trackedInv = await db.PharmacyInventories.FindAsync(inv.Id);
+            trackedInv!.Reserve(3, customer.Id, "Urgency test holds");
+
             var resUrgent = new Reservation(customer.Id, pharmacy.Id, branch.Id, medicine.Id, 2, DateTime.UtcNow.AddMinutes(15));
             var resNormal = new Reservation(customer.Id, pharmacy.Id, branch.Id, medicine.Id, 1, DateTime.UtcNow.AddMinutes(110));
             db.Reservations.AddRange(resUrgent, resNormal);
@@ -393,13 +414,16 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
     public async Task GetStaffReservationQueue_OverdueActiveReservation_ExcludedFromActiveQueue()
     {
         // Arrange
-        var (pharmacy, branch, medicine, _) = await SeedBranchDataAsync();
+        var (pharmacy, branch, medicine, inv) = await SeedBranchDataAsync();
         var (staffToken, _) = CreateTokenAndUser(UserRole.PharmacyStaff, pharmacy.Id);
         var (_, customer) = CreateTokenAndUser(UserRole.Customer);
 
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var trackedInv = await db.PharmacyInventories.FindAsync(inv.Id);
+            trackedInv!.Reserve(1, customer.Id, "Overdue hold");
+
             var overdueRes = new Reservation(
                 customer.Id,
                 pharmacy.Id,
@@ -433,7 +457,7 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
     public async Task GetStaffReservationQueue_SearchByReservationIdGuid_ReturnsExactMatch()
     {
         // Arrange
-        var (pharmacy, branch, medicine, _) = await SeedBranchDataAsync();
+        var (pharmacy, branch, medicine, inv) = await SeedBranchDataAsync();
         var (staffToken, _) = CreateTokenAndUser(UserRole.PharmacyStaff, pharmacy.Id);
         var (_, customer) = CreateTokenAndUser(UserRole.Customer);
 
@@ -441,6 +465,9 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var trackedInv = await db.PharmacyInventories.FindAsync(inv.Id);
+            trackedInv!.Reserve(5, customer.Id, "Guid search holds");
+
             var res1 = new Reservation(customer.Id, pharmacy.Id, branch.Id, medicine.Id, 2, DateTime.UtcNow.AddHours(1));
             var res2 = new Reservation(customer.Id, pharmacy.Id, branch.Id, medicine.Id, 3, DateTime.UtcNow.AddHours(1));
             db.Reservations.AddRange(res1, res2);
