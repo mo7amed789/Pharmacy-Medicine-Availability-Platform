@@ -6,7 +6,7 @@ import { MedicineSearchBar } from '../components/MedicineSearchBar';
 import { AvailabilityCard } from '../components/AvailabilityCard';
 import { ReservationDialog } from '../components/ReservationDialog';
 import { MedicineAvailabilityDto } from '@/types/availability';
-import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
+import { SkeletonCard } from '@/components/feedback/SkeletonCard';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -178,8 +178,11 @@ export function SearchPage() {
       {/* Results Section */}
       <div className="mt-8 space-y-4">
         {isLoading ? (
-          <div className="py-16">
-            <LoadingSpinner size="lg" text={language === 'ar' ? 'جارٍ البحث عن توفر الأدوية في الصيدليات...' : 'Searching medicine availability across pharmacies...'} />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 font-medium px-1">
+              <span>{language === 'ar' ? 'جارٍ البحث عن توفر الأدوية في الصيدليات القريبة...' : 'Searching medicine availability across pharmacies...'}</span>
+            </div>
+            <SkeletonCard count={3} />
           </div>
         ) : isError ? (
           <ErrorState error={error} onRetry={() => refetch()} />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Pill, Lock, Mail, User, Phone, AlertCircle } from 'lucide-react';
+import { Lock, Mail, User, Phone, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { authApi } from '../api/authApi';
 import { registerSchema } from '@/lib/validations';
@@ -93,9 +93,11 @@ export function RegisterPage() {
 
       <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-            <Pill className="h-6 w-6" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="PharmaFinder"
+            className="mx-auto h-16 w-16 object-contain drop-shadow-xs rounded-xl"
+          />
           <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('auth.createAccountTitle')}</CardTitle>
           <CardDescription className="text-slate-500 dark:text-slate-400">
             {t('auth.createAccountDesc')}

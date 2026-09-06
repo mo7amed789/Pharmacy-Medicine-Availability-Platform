@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Phone, CheckCircle2, AlertCircle, RefreshCw, LogOut, ShieldCheck } from 'lucide-react';
+import { Mail, Phone, CheckCircle2, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { authApi } from '../api/authApi';
 import { Button } from '@/components/ui/button';
@@ -185,9 +185,11 @@ export function VerificationPage() {
 
       <Card className="w-full max-w-xl shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md">
-            <ShieldCheck className="h-8 w-8" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="PharmaFinder"
+            className="mx-auto h-16 w-16 object-contain drop-shadow-xs rounded-xl"
+          />
           <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('auth.verifyIdentityTitle')}</CardTitle>
           <CardDescription className="text-slate-500 dark:text-slate-400">
             {t('auth.verifyIdentityDesc')}

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Pill, LogOut, User as UserIcon, ShieldCheck, Store } from 'lucide-react';
+import { LogOut, User as UserIcon, ShieldCheck, Store } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,13 +33,20 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-slate-100">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
-              <Pill className="h-5 w-5" />
+          <Link to="/" className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-slate-100 group">
+            <img
+              src="/logo.png"
+              alt="PharmaFinder"
+              className="h-10 w-10 object-contain rounded-lg transition-transform group-hover:scale-105 shadow-xs"
+            />
+            <div className="flex flex-col">
+              <span className="text-lg tracking-tight font-black text-blue-950 dark:text-blue-400 font-heading leading-tight">
+                {t('nav.brand')}
+              </span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-none">
+                PharmaFinder
+              </span>
             </div>
-            <span className="text-lg tracking-tight font-extrabold text-blue-900 dark:text-blue-400">
-              {t('nav.brand')}
-            </span>
           </Link>
 
           {/* Navigation Links */}

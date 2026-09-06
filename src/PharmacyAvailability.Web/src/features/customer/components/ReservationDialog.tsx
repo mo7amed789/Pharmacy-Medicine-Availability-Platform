@@ -19,6 +19,7 @@ import { useAuthStore } from '@/app/store/authStore';
 import { formatCurrency } from '@/lib/formatters';
 import { ApiError } from '@/api/apiClient';
 import { createReservationSchema, CreateReservationFormData } from '@/lib/validations';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 import { useTranslation } from '@/i18n/useTranslation';
 
 interface ReservationDialogProps {
@@ -89,12 +90,8 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
             setError('quantity', { message: qtyErr });
           }
         }
-        setServerError(err.detail || err.title);
-      } else if (err instanceof Error) {
-        setServerError(err.message);
-      } else {
-        setServerError('Failed to create reservation hold. The stock may have changed.');
       }
+      setServerError(getFriendlyErrorMessage(err, language));
     } finally {
       setIsSubmitting(false);
     }
@@ -181,16 +178,16 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
               <span className="text-lg font-bold text-blue-700 dark:text-blue-400">{formatCurrency(totalCost, item.currency)}</span>
             </div>
 
-            <div className="flex items-start gap-2 rounded-md bg-blue-50/70 dark:bg-blue-950/40 p-3 text-xs text-blue-900 dark:text-blue-200 border border-blue-100 dark:border-blue-900/60">
-              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <span>
+            <div className="flex items-start gap-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 p-3.5 text-xs text-amber-900 dark:text-amber-200 border border-amber-200/80 dark:border-amber-900/50">
+              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <span className="leading-relaxed">
                 {language === 'ar' ? (
                   <>
-                    يتم حجز الدواء باسمك لمدة <strong>60 دقيقة (ساعة واحدة)</strong>. وسيتم إعادة الكمية للمخزون تلقائياً في حال عدم الاستلام قبل انتهاء المهلة.
+                    يتم حجز الدواء باسمك لمدة <strong className="font-bold text-amber-950 dark:text-amber-100">60 دقيقة (ساعة واحدة)</strong>. وسيتم إعادة الكمية للمخزون تلقائياً في حال عدم الاستلام قبل انتهاء المهلة.
                   </>
                 ) : (
                   <>
-                    Reservations are held for <strong>60 minutes (1 hour)</strong>. Stock will be automatically released back into inventory if not picked up before expiration.
+                    Reservations are held for <strong className="font-bold text-amber-950 dark:text-amber-100">60 minutes (1 hour)</strong>. Stock will be automatically released back into inventory if not picked up before expiration.
                   </>
                 )}
               </span>
@@ -201,7 +198,11 @@ export function ReservationDialog({ item, isOpen, onClose, onSuccess }: Reservat
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={isSubmitting || item.availableQuantity <= 0}>
+            <Button
+              type="submit"
+              disabled={isSubmitting || item.availableQuantity <= 0}
+              className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-xl transition-all shadow-xs"
+            >
               {isSubmitting
                 ? (language === 'ar' ? 'جارٍ تأكيد الحجز...' : 'Reserving...')
                 : isAuthenticated

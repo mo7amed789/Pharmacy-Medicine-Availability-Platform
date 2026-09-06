@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ApiError } from '@/api/apiClient';
 import { useTranslation } from '@/i18n/useTranslation';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 
 interface ErrorStateProps {
   error: unknown;
@@ -13,18 +14,15 @@ interface ErrorStateProps {
 export function ErrorState({ error, onRetry, title }: ErrorStateProps) {
   const { language } = useTranslation();
   const displayTitle = title || (language === 'ar' ? 'تعذر تحميل البيانات' : 'Unable to Load Data');
-  let errorMessage = language === 'ar' ? 'حدث خطأ غير متوقع أثناء الاتصال بالخادم.' : 'An unexpected error occurred while communicating with the server.';
+  const errorMessage = getFriendlyErrorMessage(error, language);
   let correlationId: string | undefined;
   let statusCode: number | undefined;
   let validationErrors: Record<string, string[]> | undefined;
 
   if (error instanceof ApiError) {
-    errorMessage = error.detail || error.message;
     correlationId = error.correlationId;
     statusCode = error.status;
     validationErrors = error.validationErrors;
-  } else if (error instanceof Error) {
-    errorMessage = error.message;
   }
 
   return (

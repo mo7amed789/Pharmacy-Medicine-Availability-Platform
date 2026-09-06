@@ -16,7 +16,7 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
   const isAvailable = item.availableQuantity > 0;
 
   return (
-    <Card className="overflow-hidden border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all hover:shadow-md">
+    <Card className="overflow-hidden rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700">
       <CardContent className="p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Main Info */}
@@ -89,7 +89,7 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
               size="sm"
               disabled={!isAvailable}
               onClick={() => onReserve(item)}
-              className="px-5 shadow-xs"
+              className="px-5 shadow-xs bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
             >
               {isAvailable
                 ? (language === 'ar' ? 'حجز واستلام' : 'Reserve Hold')
