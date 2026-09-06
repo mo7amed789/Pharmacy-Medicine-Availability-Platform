@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ApiError } from '@/api/apiClient';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -81,14 +82,18 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md shadow-lg border-slate-200 dark:border-slate-800">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
             <Pill className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold text-slate-900">Sign in to your account</CardTitle>
-          <CardDescription className="text-slate-500">
+          <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">Sign in to your account</CardTitle>
+          <CardDescription className="text-slate-500 dark:text-slate-400">
             Access real-time medicine availability or your branch operations
           </CardDescription>
         </CardHeader>
@@ -103,9 +108,9 @@ export function LoginPage() {
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Email Address</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <Input
                   type="email"
                   placeholder="name@example.com"
@@ -116,14 +121,14 @@ export function LoginPage() {
                 />
               </div>
               {fieldErrors.email && (
-                <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{fieldErrors.email}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Password</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <Input
                   type="password"
                   placeholder="••••••••"
@@ -134,7 +139,7 @@ export function LoginPage() {
                 />
               </div>
               {fieldErrors.password && (
-                <p className="text-xs text-red-600 mt-1">{fieldErrors.password}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{fieldErrors.password}</p>
               )}
             </div>
           </CardContent>
@@ -144,16 +149,16 @@ export function LoginPage() {
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
 
-            <div className="text-center text-xs text-slate-600">
+            <div className="text-center text-xs text-slate-600 dark:text-slate-400">
               Don't have an account?{' '}
-              <Link to="/register" className="font-semibold text-blue-600 hover:underline">
+              <Link to="/register" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                 Create one now
               </Link>
             </div>
 
             {/* Quick Demo Fill Buttons */}
-            <div className="w-full pt-3 border-t border-slate-100 space-y-2">
-              <p className="text-[11px] font-semibold text-slate-400 text-center uppercase tracking-wider">
+            <div className="w-full pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 text-center uppercase tracking-wider">
                 Demo Accounts (1-Click Fill)
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -163,7 +168,7 @@ export function LoginPage() {
                     setEmail('admin@pharma.com');
                     setPassword('Admin123!');
                   }}
-                  className="rounded-lg border border-purple-200 bg-purple-50 px-2 py-1.5 text-center text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-colors"
+                  className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/40 px-2 py-1.5 text-center text-xs font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
                   title="Platform Admin: admin@pharma.com"
                 >
                   👑 Admin
@@ -174,7 +179,7 @@ export function LoginPage() {
                     setEmail('ezaby.admin@pharma.com');
                     setPassword('Pharmacy123!');
                   }}
-                  className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-center text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                  className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-2 py-1.5 text-center text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
                   title="Pharmacy Admin: ezaby.admin@pharma.com"
                 >
                   🏥 Pharmacy
@@ -185,7 +190,7 @@ export function LoginPage() {
                     setEmail('customer@test.com');
                     setPassword('Customer123!');
                   }}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-center text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                  className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1.5 text-center text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
                   title="Customer: customer@test.com"
                 >
                   👤 Customer

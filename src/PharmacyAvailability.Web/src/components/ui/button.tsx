@@ -16,10 +16,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const variantStyles = {
       default: 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm',
       destructive: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
-      outline: 'border border-slate-300 bg-white hover:bg-slate-100 text-slate-800',
-      secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
-      ghost: 'hover:bg-slate-100 text-slate-700 hover:text-slate-900',
-      link: 'text-blue-600 underline-offset-4 hover:underline p-0 h-auto',
+      outline: 'border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100',
+      secondary: 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700',
+      ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-50',
+      link: 'text-blue-600 dark:text-blue-400 underline-offset-4 hover:underline p-0 h-auto',
     }[variant];
 
     const sizeStyles = {

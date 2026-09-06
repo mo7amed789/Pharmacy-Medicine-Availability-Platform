@@ -102,10 +102,10 @@ export function SearchPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Banner / Hero */}
       <div className="mb-6 space-y-1">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
           Find Medicine Availability Nearby
         </h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Locate verified pharmacy stock, compare prices, and place hold reservations instantly.
         </p>
       </div>
@@ -213,7 +213,7 @@ export function SearchPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-1">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold px-1">
               <span>Found {data.totalCount} available medicine offerings</span>
               <span>Page {data.page} of {data.totalPages}</span>
             </div>

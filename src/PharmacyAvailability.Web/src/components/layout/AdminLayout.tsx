@@ -12,11 +12,11 @@ export function AdminLayout() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
       <Navbar />
 
       {/* Admin Header */}
-      <div className="border-b border-purple-200 bg-purple-950 text-white">
+      <div className="border-b border-purple-200 dark:border-purple-900/60 bg-purple-950 text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-800 text-purple-200">
@@ -38,7 +38,7 @@ export function AdminLayout() {
       </div>
 
       {/* Admin Subnav */}
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -49,8 +49,8 @@ export function AdminLayout() {
                 className={({ isActive }) =>
                   `flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'border-purple-600 text-purple-700 font-semibold'
-                      : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                      ? 'border-purple-600 text-purple-700 dark:text-purple-400 font-semibold'
+                      : 'border-transparent text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
                   }`
                 }
               >

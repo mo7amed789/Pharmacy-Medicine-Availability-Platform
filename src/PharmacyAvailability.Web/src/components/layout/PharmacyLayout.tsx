@@ -67,26 +67,26 @@ export function PharmacyLayout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
       <Navbar />
 
       {/* Pharmacy Operations Top Header */}
-      <div className="border-b border-slate-200 bg-white shadow-xs">
+      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400">
               <Building2 className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 text-base">Branch Operations Portal</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100 text-base">Branch Operations Portal</span>
                 {currentBranch && (
                   <Badge variant={currentBranch.isActive ? 'success' : 'destructive'} className="text-xs">
                     {currentBranch.isActive ? 'Branch Open' : 'Branch Closed'}
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {currentBranch ? `${currentBranch.pharmacyName} — ${currentBranch.name}` : 'Select a branch'}
               </p>
             </div>
@@ -101,7 +101,7 @@ export function PharmacyLayout() {
                   const selected = branches.find((b) => b.id === e.target.value);
                   if (selected) setCurrentBranch(selected);
                 }}
-                className="h-9 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -135,7 +135,7 @@ export function PharmacyLayout() {
       {/* Main Content Area with Navigation Tabs */}
       <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
         {/* Navigation Bar / Tabs */}
-        <div className="mb-6 flex overflow-x-auto border-b border-slate-200 pb-px">
+        <div className="mb-6 flex overflow-x-auto border-b border-slate-200 dark:border-slate-800 pb-px">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -145,8 +145,8 @@ export function PharmacyLayout() {
                 className={({ isActive }) =>
                   `flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'border-blue-600 text-blue-600 font-semibold'
-                      : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-semibold'
+                      : 'border-transparent text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
                   }`
                 }
               >
