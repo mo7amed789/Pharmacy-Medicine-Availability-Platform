@@ -1,4 +1,4 @@
-import { Search, Navigation, SlidersHorizontal } from 'lucide-react';
+import { Search, Navigation, SlidersHorizontal, X, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -11,8 +11,20 @@ interface MedicineSearchBarProps {
   onRadiusChange: (value: number) => void;
   hasLocation: boolean;
   onRequestLocation: () => void;
+  onClearLocation?: () => void;
+  onUseDemoLocation?: () => void;
   isLocating: boolean;
 }
+
+const POPULAR_MEDICINES = [
+  'Panadol',
+  'Augmentin',
+  'Congestal',
+  'Cataflam',
+  'Nexium',
+  'Brufen',
+  'All Medicines',
+];
 
 export function MedicineSearchBar({
   searchTerm,
@@ -23,10 +35,12 @@ export function MedicineSearchBar({
   onRadiusChange,
   hasLocation,
   onRequestLocation,
+  onClearLocation,
+  onUseDemoLocation,
   isLocating,
 }: MedicineSearchBarProps) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
       <div className="flex flex-col md:flex-row gap-3">
         {/* Main Search Input */}
         <div className="relative flex-1">
@@ -38,23 +52,103 @@ export function MedicineSearchBar({
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10 h-11 text-sm bg-slate-50/50 border-slate-200 focus:bg-white"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+              title="Clear search"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
-        {/* GPS Geolocation Button */}
-        <Button
-          type="button"
-          variant={hasLocation ? 'default' : 'outline'}
-          className="h-11 flex items-center gap-2 whitespace-nowrap"
-          onClick={onRequestLocation}
-          disabled={isLocating}
-        >
-          <Navigation className={`h-4 w-4 ${isLocating ? 'animate-spin' : ''}`} />
-          <span>{isLocating ? 'Locating...' : hasLocation ? 'Nearby Active' : 'Use Location'}</span>
-        </Button>
+        {/* GPS Geolocation Controls */}
+        <div className="flex items-center gap-2">
+          {hasLocation ? (
+            <div className="flex items-center rounded-md border border-blue-200 bg-blue-50 p-1">
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                className="h-9 flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700"
+                onClick={onRequestLocation}
+                disabled={isLocating}
+                title="Refresh current location"
+              >
+                <Navigation className={`h-3.5 w-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                <span>{isLocating ? 'Locating...' : 'Nearby Active'}</span>
+              </Button>
+              {onClearLocation && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-xs text-blue-700 hover:bg-blue-100"
+                  onClick={onClearLocation}
+                  title="Remove location filter (Show nationwide)"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear GPS
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 flex items-center gap-2 whitespace-nowrap text-xs"
+                onClick={onRequestLocation}
+                disabled={isLocating}
+              >
+                <Navigation className={`h-4 w-4 ${isLocating ? 'animate-spin' : ''}`} />
+                <span>{isLocating ? 'Locating...' : 'Use My GPS'}</span>
+              </Button>
+              {onUseDemoLocation && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200"
+                  onClick={onUseDemoLocation}
+                  title="Test with Cairo coordinates (Downtown Cairo)"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Cairo Demo GPS</span>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Test Chips */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+        <span className="text-slate-400 font-medium mr-1">Quick Test:</span>
+        {POPULAR_MEDICINES.map((tag) => {
+          const isAll = tag === 'All Medicines';
+          const isSelected = (isAll && !searchTerm) || searchTerm.toLowerCase() === tag.toLowerCase();
+
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => onSearchChange(isAll ? '' : tag)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                isSelected
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {tag}
+            </button>
+          );
+        })}
       </div>
 
       {/* Secondary Controls: Sort and Radius */}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
         <div className="flex items-center gap-2 text-slate-600">
           <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
           <span className="font-semibold">Sort By:</span>
@@ -70,7 +164,7 @@ export function MedicineSearchBar({
           </select>
         </div>
 
-        {hasLocation && (
+        {hasLocation ? (
           <div className="flex items-center gap-2 text-slate-600">
             <span className="font-semibold">Radius:</span>
             <select
@@ -85,6 +179,10 @@ export function MedicineSearchBar({
               <option value="50">50 km</option>
             </select>
           </div>
+        ) : (
+          <span className="text-[11px] text-slate-400 italic">
+            Showing all pharmacies nationwide (no radius limit)
+          </span>
         )}
       </div>
     </div>
