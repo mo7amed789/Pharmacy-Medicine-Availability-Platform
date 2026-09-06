@@ -51,7 +51,7 @@ export function InventoryPage() {
   const [priceItem, setPriceItem] = useState<InventoryItemDto | null>(null);
   const [historyItem, setHistoryItem] = useState<InventoryItemDto | null>(null);
 
-  const pharmacyId = user?.pharmacyId;
+  const pharmacyId = user?.pharmacyId || currentBranch?.pharmacyId;
   const branchId = currentBranch?.id;
 
   const { data: inventory, isLoading, isError, error, refetch } = useQuery({

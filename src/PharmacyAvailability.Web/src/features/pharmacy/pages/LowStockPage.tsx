@@ -26,7 +26,7 @@ export function LowStockPage() {
   const { currentBranch } = useBranchStore();
   const [threshold, setThreshold] = useState<number>(5);
 
-  const pharmacyId = user?.pharmacyId;
+  const pharmacyId = user?.pharmacyId || currentBranch?.pharmacyId;
   const branchId = currentBranch?.id;
 
   const { data, isLoading, isError, error, refetch } = useQuery({

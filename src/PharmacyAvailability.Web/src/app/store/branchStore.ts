@@ -6,7 +6,27 @@ interface BranchState {
   setCurrentBranch: (branch: PharmacyBranchDto | null) => void;
 }
 
+const getStoredBranch = (): PharmacyBranchDto | null => {
+  try {
+    const raw = localStorage.getItem('pharma-current-branch');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const useBranchStore = create<BranchState>((set) => ({
-  currentBranch: null,
-  setCurrentBranch: (branch) => set({ currentBranch: branch }),
+  currentBranch: getStoredBranch(),
+  setCurrentBranch: (branch) => {
+    try {
+      if (branch) {
+        localStorage.setItem('pharma-current-branch', JSON.stringify(branch));
+      } else {
+        localStorage.removeItem('pharma-current-branch');
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    set({ currentBranch: branch });
+  },
 }));

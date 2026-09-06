@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Users, UserPlus, Phone } from 'lucide-react';
 import { useAuthStore } from '@/app/store/authStore';
+import { useBranchStore } from '@/app/store/branchStore';
 import { pharmacyOpsApi } from '../api/pharmacyOpsApi';
 import { PharmacyStaffDto } from '@/types/pharmacies';
 import { Input } from '@/components/ui/input';
@@ -35,8 +36,9 @@ import { useTranslation } from '@/i18n/useTranslation';
 export function StaffManagementPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const { currentBranch } = useBranchStore();
   const queryClient = useQueryClient();
-  const pharmacyId = user?.pharmacyId;
+  const pharmacyId = user?.pharmacyId || currentBranch?.pharmacyId;
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);

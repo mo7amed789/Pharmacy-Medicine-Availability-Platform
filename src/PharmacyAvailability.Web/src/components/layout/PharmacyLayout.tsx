@@ -15,6 +15,7 @@ import { Navbar } from './Navbar';
 import { useAuthStore } from '@/app/store/authStore';
 import { useBranchStore } from '@/app/store/branchStore';
 import { pharmacyOpsApi } from '@/features/pharmacy/api/pharmacyOpsApi';
+import { customerApi } from '@/features/customer/api/customerApi';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/feedback/LoadingSpinner';
@@ -24,28 +25,37 @@ export function PharmacyLayout() {
   const { user } = useAuthStore();
   const { currentBranch, setCurrentBranch } = useBranchStore();
   const queryClient = useQueryClient();
+  const { t, language } = useTranslation();
 
-  // If PlatformAdmin has no pharmacyId assigned, they can test with any pharmacy, but staff has user.pharmacyId
-  const pharmacyId = user?.pharmacyId;
+  // If PlatformAdmin has no pharmacyId assigned, they can inspect all branches in the platform
+  const userPharmacyId = user?.pharmacyId;
 
   const { data: branches, isLoading } = useQuery({
-    queryKey: ['pharmacy-branches', pharmacyId],
-    queryFn: () => (pharmacyId ? pharmacyOpsApi.getBranches(pharmacyId) : Promise.resolve([])),
-    enabled: !!pharmacyId,
+    queryKey: ['pharmacy-branches', userPharmacyId],
+    queryFn: async () => {
+      if (userPharmacyId) {
+        return pharmacyOpsApi.getBranches(userPharmacyId);
+      }
+      return customerApi.getActiveBranches();
+    },
   });
 
-  // Auto-select first active branch if not yet selected
+  // Auto-select first active branch if not yet selected or if selected one is not in current branches
   useEffect(() => {
-    if (branches && branches.length > 0 && !currentBranch) {
-      setCurrentBranch(branches[0]);
+    if (branches && branches.length > 0) {
+      if (!currentBranch || !branches.some((b) => b.id === currentBranch.id)) {
+        setCurrentBranch(branches[0]);
+      }
     }
   }, [branches, currentBranch, setCurrentBranch]);
 
   // Toggle branch operational status mutation
+  const effectivePharmacyId = userPharmacyId || currentBranch?.pharmacyId;
+
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ branchId, isActive }: { branchId: string; isActive: boolean }) => {
-      if (!pharmacyId) return;
-      return pharmacyOpsApi.toggleBranchStatus(pharmacyId, branchId, isActive);
+      if (!effectivePharmacyId) return;
+      return pharmacyOpsApi.toggleBranchStatus(effectivePharmacyId, branchId, isActive);
     },
     onSuccess: (updated) => {
       if (updated) {
@@ -54,8 +64,6 @@ export function PharmacyLayout() {
       }
     },
   });
-
-  const { t, language } = useTranslation();
 
   const navItems = [
     { label: t('pharmacy.dashboard'), path: '/pharmacy/dashboard', icon: LayoutDashboard },
@@ -97,22 +105,32 @@ export function PharmacyLayout() {
 
           {/* Branch Selector and Status Toggle */}
           <div className="flex items-center gap-3">
-            {branches && branches.length > 1 && (
-              <select
-                value={currentBranch?.id || ''}
-                onChange={(e) => {
-                  const selected = branches.find((b) => b.id === e.target.value);
-                  if (selected) setCurrentBranch(selected);
-                }}
-                className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name} ({b.city})
-                  </option>
-                ))}
-              </select>
-            )}
+            {branches && branches.length > 0 ? (
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 hidden sm:inline">
+                  {t('pharmacy.switchBranch')}
+                </label>
+                <select
+                  value={currentBranch?.id || ''}
+                  onChange={(e) => {
+                    const selected = branches.find((b) => b.id === e.target.value);
+                    if (selected) setCurrentBranch(selected);
+                  }}
+                  className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.pharmacyName ? `${b.pharmacyName} — ${b.name}` : b.name} ({b.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : isLoading ? (
+              <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                <LoadingSpinner size="sm" />
+                <span>{t('common.loading')}</span>
+              </div>
+            ) : null}
 
             {currentBranch && (
               <Button
@@ -164,11 +182,13 @@ export function PharmacyLayout() {
 
         {isLoading ? (
           <div className="py-12">
-            <LoadingSpinner size="lg" text="Loading pharmacy branches..." />
+            <LoadingSpinner size="lg" text={t('common.loading')} />
           </div>
-        ) : !pharmacyId && user?.role !== 'PlatformAdmin' ? (
+        ) : !userPharmacyId && user?.role !== 'PlatformAdmin' ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800">
-            You are not currently linked to any active pharmacy. Please contact support.
+            {language === 'ar'
+              ? 'حسابك غير مرتبط بأي صيدلية معتمدة حالياً. يرجى التواصل مع إدارة النظام.'
+              : 'You are not currently linked to any active pharmacy. Please contact support.'}
           </div>
         ) : (
           <Outlet />

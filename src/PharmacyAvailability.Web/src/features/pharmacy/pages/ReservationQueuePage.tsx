@@ -52,7 +52,7 @@ export function ReservationQueuePage() {
   const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
   const [pickupError, setPickupError] = useState<string | null>(null);
 
-  const pharmacyId = user?.pharmacyId;
+  const pharmacyId = user?.pharmacyId || currentBranch?.pharmacyId;
   const branchId = currentBranch?.id;
 
   const { data, isLoading, isError, error, refetch } = useQuery({

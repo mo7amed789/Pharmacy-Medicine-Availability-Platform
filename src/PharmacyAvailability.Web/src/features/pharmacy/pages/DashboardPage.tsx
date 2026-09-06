@@ -22,7 +22,7 @@ export function DashboardPage() {
   const { user } = useAuthStore();
   const { currentBranch } = useBranchStore();
 
-  const pharmacyId = user?.pharmacyId;
+  const pharmacyId = user?.pharmacyId || currentBranch?.pharmacyId;
   const branchId = currentBranch?.id;
 
   const { data: dashboard, isLoading, isError, error, refetch } = useQuery({
