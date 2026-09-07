@@ -11,6 +11,7 @@ import {
   SendVerificationRequest,
   VerificationStatusResponse,
 } from '@/types/auth';
+import { RegisterPharmacyRequest, PharmacyDto } from '@/types/pharmacies';
 
 export const authApi = {
   login: async (request: LoginRequest): Promise<AuthResponse> => {
@@ -20,6 +21,11 @@ export const authApi = {
 
   register: async (request: RegisterRequest): Promise<AuthResponse> => {
     const res = await apiClient.post<AuthResponse>(ENDPOINTS.AUTH_REGISTER, request);
+    return res.data;
+  },
+
+  registerPharmacy: async (request: RegisterPharmacyRequest): Promise<PharmacyDto> => {
+    const res = await apiClient.post<PharmacyDto>(ENDPOINTS.REGISTER_PHARMACY, request);
     return res.data;
   },
 
