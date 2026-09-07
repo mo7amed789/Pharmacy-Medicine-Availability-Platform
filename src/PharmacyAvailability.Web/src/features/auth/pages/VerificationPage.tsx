@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ApiError } from '@/api/apiClient';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 import { verifyCodeSchema } from '@/lib/validations';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { LanguageToggle } from '@/components/common/LanguageToggle';
@@ -86,9 +87,9 @@ export function VerificationPage() {
       setEmailCode('');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setEmailError(err.detail || err.title);
+        setEmailError(getFriendlyErrorMessage(err, language));
       } else if (err instanceof Error) {
-        setEmailError(err.message);
+        setEmailError(getFriendlyErrorMessage(err.message, language));
       } else {
         setEmailError(language === 'ar' ? 'فشل التحقق من رمز البريد.' : 'Failed to verify email code.');
       }
@@ -119,9 +120,9 @@ export function VerificationPage() {
       setPhoneCode('');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setPhoneError(err.detail || err.title);
+        setPhoneError(getFriendlyErrorMessage(err, language));
       } else if (err instanceof Error) {
-        setPhoneError(err.message);
+        setPhoneError(getFriendlyErrorMessage(err.message, language));
       } else {
         setPhoneError(language === 'ar' ? 'فشل التحقق من رمز الهاتف.' : 'Failed to verify phone code.');
       }
@@ -142,9 +143,9 @@ export function VerificationPage() {
       setEmailCooldown(60);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setEmailError(err.detail || err.title);
+        setEmailError(getFriendlyErrorMessage(err, language));
       } else if (err instanceof Error) {
-        setEmailError(err.message);
+        setEmailError(getFriendlyErrorMessage(err.message, language));
       } else {
         setEmailError(language === 'ar' ? 'فشل إعادة إرسال الرمز.' : 'Failed to resend code.');
       }
@@ -165,9 +166,9 @@ export function VerificationPage() {
       setPhoneCooldown(60);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setPhoneError(err.detail || err.title);
+        setPhoneError(getFriendlyErrorMessage(err, language));
       } else if (err instanceof Error) {
-        setPhoneError(err.message);
+        setPhoneError(getFriendlyErrorMessage(err.message, language));
       } else {
         setPhoneError(language === 'ar' ? 'فشل إعادة إرسال الرمز.' : 'Failed to resend code.');
       }

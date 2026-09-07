@@ -9,9 +9,46 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ApiError } from '@/api/apiClient';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { LanguageToggle } from '@/components/common/LanguageToggle';
 import { useTranslation } from '@/i18n/useTranslation';
+
+export function getSafeRedirectPath(role: string, targetPath?: string): string {
+  const defaultDashboard =
+    role === 'PlatformAdmin'
+      ? '/admin/dashboard'
+      : role === 'PharmacyStaff' || role === 'PharmacyAdmin'
+      ? '/pharmacy/dashboard'
+      : '/customer/search';
+
+  if (
+    !targetPath ||
+    targetPath === '/' ||
+    targetPath === '/login' ||
+    targetPath === '/register' ||
+    targetPath === '/unauthorized'
+  ) {
+    return defaultDashboard;
+  }
+
+  // Prevent non-platform admins from being sent to /admin/* routes (prevents /unauthorized loop)
+  if (targetPath.startsWith('/admin') && role !== 'PlatformAdmin') {
+    return defaultDashboard;
+  }
+
+  // Prevent non-pharmacy roles from being sent to /pharmacy/* routes
+  if (
+    targetPath.startsWith('/pharmacy') &&
+    role !== 'PharmacyStaff' &&
+    role !== 'PharmacyAdmin' &&
+    role !== 'PlatformAdmin'
+  ) {
+    return defaultDashboard;
+  }
+
+  return targetPath;
+}
 
 export function LoginPage() {
   const { t, language } = useTranslation();
@@ -51,21 +88,12 @@ export function LoginPage() {
       const response = await authApi.login({ email: email.trim(), password });
       setSession(response.user, response.accessToken, response.refreshToken);
 
-      // Role-based smart redirect if from is root
-      if (from === '/' || from === '/login') {
-        if (response.user.role === 'PlatformAdmin') {
-          navigate('/admin/dashboard', { replace: true });
-        } else if (response.user.role === 'PharmacyStaff' || response.user.role === 'PharmacyAdmin') {
-          navigate('/pharmacy/dashboard', { replace: true });
-        } else {
-          navigate('/customer/search', { replace: true });
-        }
-      } else {
-        navigate(from, { replace: true });
-      }
+      // Smart role-checked destination redirect
+      const destination = getSafeRedirectPath(response.user.role, from);
+      navigate(destination, { replace: true });
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setError(err.detail || err.title);
+        setError(getFriendlyErrorMessage(err, language));
         if (err.validationErrors) {
           const mapped: Record<string, string> = {};
           for (const [key, msgs] of Object.entries(err.validationErrors)) {
@@ -75,7 +103,7 @@ export function LoginPage() {
           setFieldErrors(mapped);
         }
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(getFriendlyErrorMessage(err.message, language));
       } else {
         setError(language === 'ar' ? 'تعذر تسجيل الدخول. يرجى التحقق من بيانات الدخول.' : 'Failed to sign in. Please verify your credentials.');
       }

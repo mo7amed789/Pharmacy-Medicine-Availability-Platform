@@ -34,11 +34,35 @@ export function getFriendlyErrorMessage(rawError: unknown, language: 'ar' | 'en'
       : 'This branch is currently closed and not taking reservations. Please pick an open branch.';
   }
 
-  // Invalid Credentials
-  if (lower.includes('invalid credentials') || lower.includes('password') || lower.includes('unauthorized') || lower.includes('401')) {
+  // Invalid Credentials / 401 Unauthorized
+  if (
+    (rawError as any)?.status === 401 ||
+    (rawError as any)?.isUnauthorized ||
+    lower.includes('invalid credentials') ||
+    lower.includes('invalid email') ||
+    lower.includes('password') ||
+    lower.includes('unauthorized') ||
+    lower.includes('account not found') ||
+    lower.includes('not found or inactive') ||
+    lower.includes('401')
+  ) {
     return language === 'ar'
       ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق من البيانات والمحاولة مرة أخرى.'
       : 'The email address or password is incorrect. Please verify your credentials and try again.';
+  }
+
+  // Forbidden / 403 Access Denied
+  if (
+    (rawError as any)?.status === 403 ||
+    (rawError as any)?.isForbidden ||
+    lower.includes('forbidden') ||
+    lower.includes('access denied') ||
+    lower.includes('permission') ||
+    lower.includes('403')
+  ) {
+    return language === 'ar'
+      ? 'ليس لديك الصلاحيات الكافية للوصول إلى هذا المحتوى أو المورد.'
+      : 'You do not have sufficient permissions to access this content.';
   }
 
   // Email Already Registered
