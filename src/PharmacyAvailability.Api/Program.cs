@@ -49,11 +49,15 @@ builder.Services.AddDbContext<PharmacyDbContext>(options =>
     }));
 
 // 3. Security & Cryptography Services
+builder.Services.AddHttpClient();
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<EmailSmtpOptions>(builder.Configuration.GetSection(EmailSmtpOptions.SectionName));
+builder.Services.Configure<SmsOptions>(builder.Configuration.GetSection(SmsOptions.SectionName));
 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IEmailExistenceValidator, EmailExistenceValidator>();
+builder.Services.AddScoped<IVerificationSender, SmtpVerificationSender>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IVerificationSender, DevelopmentVerificationSender>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();

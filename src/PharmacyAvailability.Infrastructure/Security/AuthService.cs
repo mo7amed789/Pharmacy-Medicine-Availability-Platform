@@ -16,6 +16,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHashService _passwordHasher;
     private readonly ITokenService _tokenService;
     private readonly IVerificationSender _verificationSender;
+    private readonly IEmailExistenceValidator _emailValidator;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
@@ -23,12 +24,14 @@ public class AuthService : IAuthService
         IPasswordHashService passwordHasher,
         ITokenService tokenService,
         IVerificationSender verificationSender,
+        IEmailExistenceValidator emailValidator,
         ILogger<AuthService> logger)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
         _verificationSender = verificationSender;
+        _emailValidator = emailValidator;
         _logger = logger;
     }
 
@@ -45,6 +48,15 @@ public class AuthService : IAuthService
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var normalizedPhone = request.PhoneNumber.Trim();
+
+        // Validate that the email domain exists in real life and is not disposable/fake
+        var emailExistenceResult = await _emailValidator.ValidateEmailExistenceAsync(normalizedEmail, ct);
+        if (!emailExistenceResult.IsValid)
+        {
+            _logger.LogWarning("Registration failed: Email '{Email}' failed existence check: {Reason}",
+                normalizedEmail, emailExistenceResult.ErrorMessage);
+            throw new DomainValidationException(emailExistenceResult.ErrorMessage ?? "The email domain does not exist or cannot receive mail.");
+        }
 
         var existing = await _context.Users.AnyAsync(u => u.Email == normalizedEmail, ct);
         if (existing)

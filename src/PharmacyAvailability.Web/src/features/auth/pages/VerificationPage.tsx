@@ -194,8 +194,15 @@ export function VerificationPage() {
           <CardDescription className="text-slate-500 dark:text-slate-400">
             {t('auth.verifyIdentityDesc')}
           </CardDescription>
-          <div className="mt-2 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/50 text-start">
-            <span className="font-semibold">{t('auth.devTip')}</span>
+
+          <div className="mt-3 text-xs bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 p-3 rounded-xl border border-blue-200/80 dark:border-blue-900/50 text-start space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-blue-950 dark:text-blue-100">
+              <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>{t('auth.realEmailNotice', { email: user?.email || '' })}</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
+              {t('auth.spamTip')}
+            </p>
           </div>
         </CardHeader>
 
