@@ -24,8 +24,12 @@ public class PharmacyOperationsIntegrationTests : IClassFixture<WebApplicationFa
 
     public PharmacyOperationsIntegrationTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("FeatureFlags:EnableManagementApis", "true");
+            builder.UseSetting("FeatureFlags:EnableReservations", "true");
+        });
+        _client = _factory.CreateClient();
     }
 
     private (string Token, User User) CreateTokenAndUser(UserRole role, Guid? pharmacyId = null, string? phone = null, string? name = null)

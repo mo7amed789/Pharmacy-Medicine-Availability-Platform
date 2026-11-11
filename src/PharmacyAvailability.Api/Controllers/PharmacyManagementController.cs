@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyAvailability.Api.Authorization;
+using PharmacyAvailability.Api.Filters;
 using PharmacyAvailability.Application.Pharmacies;
 using PharmacyAvailability.Contracts.Pharmacies;
 
@@ -9,6 +10,7 @@ namespace PharmacyAvailability.Api.Controllers;
 [ApiController]
 [Route("api/v1/pharmacies/{pharmacyId:guid}")]
 [Authorize]
+[FeatureGate("EnableManagementApis")]
 public class PharmacyManagementController : ControllerBase
 {
     private readonly IPharmacyService _pharmacyService;

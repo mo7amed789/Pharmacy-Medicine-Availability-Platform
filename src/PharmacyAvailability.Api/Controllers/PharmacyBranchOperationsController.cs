@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyAvailability.Api.Filters;
 using PharmacyAvailability.Application.Operations;
 using PharmacyAvailability.Contracts.Catalog;
 using PharmacyAvailability.Contracts.Operations;
@@ -11,6 +12,7 @@ namespace PharmacyAvailability.Api.Controllers;
 [ApiController]
 [Route("api/v1/pharmacies/{pharmacyId:guid}/branches/{branchId:guid}/operations")]
 [Authorize(Roles = "PharmacyStaff,PharmacyAdmin,PlatformAdmin")]
+[FeatureGate("EnableManagementApis")]
 public class PharmacyBranchOperationsController : ControllerBase
 {
     private readonly IPharmacyOperationsService _operationsService;

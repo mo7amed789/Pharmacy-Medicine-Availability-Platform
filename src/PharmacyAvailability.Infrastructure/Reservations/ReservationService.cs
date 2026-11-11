@@ -40,6 +40,16 @@ public class ReservationService : IReservationService
         if (request.Quantity <= 0)
             throw new DomainValidationException("Reservation quantity must be greater than zero.");
 
+        // A fresh registration cannot be used to reserve stock until both ownership
+        // channels have been verified. This prevents anonymous sign-up automation
+        // from exhausting pharmacy inventory holds.
+        var customer = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == customerId, ct);
+
+        if (customer == null || !customer.IsActive || customer.Role != UserRole.Customer || !customer.IsFullyVerified)
+            throw new UnauthorizedAccessException("A fully verified customer account is required to place a reservation.");
+
         // Explicit database transaction guarantees full rollback on any failure
         using var transaction = await _context.Database.BeginTransactionAsync(ct);
 

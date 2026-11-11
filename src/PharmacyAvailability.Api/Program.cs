@@ -65,7 +65,10 @@ builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
 builder.Services.AddScoped<IPharmacyOperationsService, PharmacyOperationsService>();
 builder.Services.Configure<ReservationOptions>(builder.Configuration.GetSection(ReservationOptions.SectionName));
 builder.Services.AddScoped<IReservationService, ReservationService>();
-builder.Services.AddHostedService<ReservationExpirationWorker>();
+if (builder.Configuration.GetValue<bool>("FeatureFlags:EnableReservations", false))
+{
+    builder.Services.AddHostedService<ReservationExpirationWorker>();
+}
 
 // 4. JWT Authentication
 var jwtSecret = builder.Configuration["Jwt:Secret"];
@@ -191,7 +194,42 @@ app.UseCors("CorsPolicy");
 // G. Rate Limiter
 app.UseRateLimiter();
 
-// H. Authentication & Authorization
+app.UseRouting();
+
+// H. Feature Gate Middleware (Short-circuits disabled features with 503 before Auth/Execution)
+app.Use(async (context, next) =>
+{
+    var endpoint = context.GetEndpoint();
+    var featureGate = endpoint?.Metadata.GetMetadata<FeatureGateAttribute>();
+    if (featureGate != null)
+    {
+        var config = context.RequestServices.GetRequiredService<IConfiguration>();
+        if (!config.GetValue<bool>($"FeatureFlags:{featureGate.FeatureName}", false))
+        {
+            var correlationId = context.Items[CorrelationIdMiddleware.CorrelationIdItemKey]?.ToString()
+                ?? Guid.NewGuid().ToString("D");
+
+            var problemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Title = "Feature Disabled",
+                Detail = $"The requested feature '{featureGate.FeatureName}' is temporarily disabled. The platform is currently operating in query-only medicine availability mode.",
+                Instance = context.Request.Path,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.6.4"
+            };
+            problemDetails.Extensions["correlationId"] = correlationId;
+
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsJsonAsync(problemDetails);
+            return;
+        }
+    }
+
+    await next();
+});
+
+// I. Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 

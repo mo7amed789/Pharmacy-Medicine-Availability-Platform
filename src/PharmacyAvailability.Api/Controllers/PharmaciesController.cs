@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using PharmacyAvailability.Application.Pharmacies;
 using PharmacyAvailability.Contracts.Pharmacies;
 
@@ -6,6 +8,7 @@ namespace PharmacyAvailability.Api.Controllers;
 
 [ApiController]
 [Route("api/v1")]
+[AllowAnonymous]
 public class PharmaciesController : ControllerBase
 {
     private readonly IPharmacyService _pharmacyService;
@@ -16,6 +19,7 @@ public class PharmaciesController : ControllerBase
     }
 
     [HttpPost("pharmacies/register")]
+    [EnableRateLimiting("PublicWriteRateLimit")]
     public async Task<ActionResult<PharmacyDto>> RegisterPharmacy(
         [FromBody] RegisterPharmacyRequest request,
         CancellationToken ct)

@@ -8,10 +8,10 @@ import { useTranslation } from '@/i18n/useTranslation';
 
 interface AvailabilityCardProps {
   item: MedicineAvailabilityDto;
-  onReserve: (item: MedicineAvailabilityDto) => void;
+  onReserve?: (item: MedicineAvailabilityDto) => void;
 }
 
-export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
+export function AvailabilityCard({ item }: AvailabilityCardProps) {
   const { language } = useTranslation();
   const isAvailable = item.availableQuantity > 0;
 
@@ -74,7 +74,7 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
             </div>
           </div>
 
-          {/* Pricing & Reservation CTA */}
+          {/* Pricing & Contact action */}
           <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-s border-slate-100 dark:border-slate-800 pt-3 md:pt-0 md:ps-6 gap-3">
             <div className="text-start md:text-end">
               <div className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -85,16 +85,19 @@ export function AvailabilityCard({ item, onReserve }: AvailabilityCardProps) {
               </p>
             </div>
 
-            <Button
-              size="sm"
-              disabled={!isAvailable}
-              onClick={() => onReserve(item)}
-              className="px-5 shadow-xs bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isAvailable
-                ? (language === 'ar' ? 'حجز واستلام' : 'Reserve Hold')
-                : (language === 'ar' ? 'غير متوفر' : 'Unavailable')}
-            </Button>
+            {item.branchPhone && (
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="px-4 gap-1.5 text-xs font-semibold rounded-xl border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50"
+              >
+                <a href={`tel:${item.branchPhone}`}>
+                  <Phone className="h-3.5 w-3.5" />
+                  {language === 'ar' ? 'اتصال بالصيدلية' : 'Call Pharmacy'}
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

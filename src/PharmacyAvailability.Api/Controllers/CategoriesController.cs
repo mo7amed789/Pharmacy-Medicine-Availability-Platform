@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using PharmacyAvailability.Application.Catalog;
 using PharmacyAvailability.Contracts.Catalog;
 
@@ -6,6 +7,7 @@ namespace PharmacyAvailability.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/categories")]
+[AllowAnonymous]
 public class CategoriesController : ControllerBase
 {
     private readonly ICatalogService _catalogService;

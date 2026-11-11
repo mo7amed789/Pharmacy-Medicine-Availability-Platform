@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyAvailability.Api.Filters;
 using PharmacyAvailability.Application.Pharmacies;
 using PharmacyAvailability.Contracts.Pharmacies;
 using PharmacyAvailability.Domain.Pharmacies;
@@ -9,6 +10,7 @@ namespace PharmacyAvailability.Api.Controllers;
 [ApiController]
 [Route("api/v1/admin/pharmacies")]
 [Authorize(Policy = "PlatformAdminOnly")]
+[FeatureGate("EnableManagementApis")]
 public class AdminPharmaciesController : ControllerBase
 {
     private readonly IPharmacyService _pharmacyService;

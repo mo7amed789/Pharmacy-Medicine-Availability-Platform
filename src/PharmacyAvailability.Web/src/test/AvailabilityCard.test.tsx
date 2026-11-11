@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
 import { AvailabilityCard } from '@/features/customer/components/AvailabilityCard';
 import { MedicineAvailabilityDto } from '@/types/availability';
 import { renderWithProviders } from './test-utils';
@@ -37,8 +37,7 @@ describe('AvailabilityCard', () => {
   });
 
   it('renders medicine details, price, distance, and in-stock badge in Arabic by default', () => {
-    const handleReserve = vi.fn();
-    renderWithProviders(<AvailabilityCard item={mockItem} onReserve={handleReserve} />);
+    renderWithProviders(<AvailabilityCard item={mockItem} />);
 
     expect(screen.getByText('Panadol Extra')).toBeInTheDocument();
     expect(screen.getByText(/Paracetamol/i)).toBeInTheDocument();
@@ -48,37 +47,29 @@ describe('AvailabilityCard', () => {
     expect(screen.getByText(/El Ezaby Pharmacy/i)).toBeInTheDocument();
   });
 
-  it('triggers onReserve callback when Reserve Hold button is clicked in Arabic', () => {
-    const handleReserve = vi.fn();
-    renderWithProviders(<AvailabilityCard item={mockItem} onReserve={handleReserve} />);
+  it('renders call pharmacy button when phone number is available', () => {
+    renderWithProviders(<AvailabilityCard item={mockItem} />);
 
-    const reserveButton = screen.getByRole('button', { name: /حجز واستلام/i });
-    fireEvent.click(reserveButton);
-
-    expect(handleReserve).toHaveBeenCalledTimes(1);
-    expect(handleReserve).toHaveBeenCalledWith(mockItem);
+    const callLink = screen.getByRole('link', { name: /اتصال بالصيدلية/i });
+    expect(callLink).toBeInTheDocument();
+    expect(callLink).toHaveAttribute('href', 'tel:0223456789');
   });
 
-  it('renders out of stock badge and disables reservation when stock is 0 in Arabic', () => {
+  it('renders out of stock badge when stock is 0 in Arabic', () => {
     const outOfStockItem = { ...mockItem, availableQuantity: 0 };
-    const handleReserve = vi.fn();
 
-    renderWithProviders(<AvailabilityCard item={outOfStockItem} onReserve={handleReserve} />);
+    renderWithProviders(<AvailabilityCard item={outOfStockItem} />);
 
     const outOfStockBadges = screen.getAllByText('غير متوفر');
     expect(outOfStockBadges.length).toBeGreaterThanOrEqual(1);
-
-    const button = screen.getByRole('button', { name: /غير متوفر/i });
-    expect(button).toBeDisabled();
   });
 
   it('renders English strings when language is set to English', () => {
     useLanguageStore.getState().setLanguage('en');
-    const handleReserve = vi.fn();
-    renderWithProviders(<AvailabilityCard item={mockItem} onReserve={handleReserve} />);
+    renderWithProviders(<AvailabilityCard item={mockItem} />);
 
     expect(screen.getByText('8 in stock')).toBeInTheDocument();
-    const reserveButton = screen.getByRole('button', { name: /Reserve Hold/i });
-    expect(reserveButton).toBeInTheDocument();
+    const callLink = screen.getByRole('link', { name: /Call Pharmacy/i });
+    expect(callLink).toBeInTheDocument();
   });
 });

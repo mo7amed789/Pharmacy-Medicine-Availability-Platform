@@ -17,7 +17,7 @@ export function Footer() {
             <span>•</span>
             <span>{language === 'ar' ? 'عمليات الفروع' : 'Branch Operations'}</span>
             <span>•</span>
-            <span>{language === 'ar' ? 'حجز واستلام مؤكد' : 'Audited Reservations'}</span>
+            <span>{language === 'ar' ? 'صيدليات معتمدة' : 'Verified Pharmacies'}</span>
           </div>
         </div>
       </div>

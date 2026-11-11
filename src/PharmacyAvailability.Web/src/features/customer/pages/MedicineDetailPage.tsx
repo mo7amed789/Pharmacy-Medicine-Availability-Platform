@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Pill, Building2 } from 'lucide-react';
 import { customerApi } from '../api/customerApi';
 import { AvailabilityCard } from '../components/AvailabilityCard';
-import { ReservationDialog } from '../components/ReservationDialog';
-import { MedicineAvailabilityDto } from '@/types/availability';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,8 +14,6 @@ import { useTranslation } from '@/i18n/useTranslation';
 export function MedicineDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const [selectedItem, setSelectedItem] = useState<MedicineAvailabilityDto | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // 1. Fetch medicine catalog details
   const {
@@ -131,22 +126,11 @@ export function MedicineDetailPage() {
               <AvailabilityCard
                 key={`${item.inventoryId}-${item.branchId}`}
                 item={item}
-                onReserve={(it) => {
-                  setSelectedItem(it);
-                  setIsDialogOpen(true);
-                }}
               />
             ))}
           </div>
         )}
       </div>
-
-      <ReservationDialog
-        item={selectedItem}
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSuccess={() => refetch()}
-      />
     </div>
   );
 }

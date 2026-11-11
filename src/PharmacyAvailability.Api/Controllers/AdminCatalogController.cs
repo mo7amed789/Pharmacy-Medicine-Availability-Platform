@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyAvailability.Api.Filters;
 using PharmacyAvailability.Application.Catalog;
 using PharmacyAvailability.Contracts.Catalog;
 
@@ -8,6 +9,7 @@ namespace PharmacyAvailability.Api.Controllers;
 [ApiController]
 [Route("api/v1/admin")]
 [Authorize(Policy = "PlatformAdminOnly")]
+[FeatureGate("EnableManagementApis")]
 public class AdminCatalogController : ControllerBase
 {
     private readonly ICatalogService _catalogService;

@@ -27,6 +27,11 @@ public class SecurityHeadersMiddleware
             // Restrict referrer information sent on cross-origin requests
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 
+            // API responses must not be embedded or treated as a cross-origin resource by default.
+            headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            headers["Cross-Origin-Resource-Policy"] = "same-origin";
+            headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(), payment=(), usb=()";
+
             return Task.CompletedTask;
         });
 

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { SearchX, CheckCircle2, MapPin, Globe } from 'lucide-react';
+import { SearchX, MapPin, Globe } from 'lucide-react';
 import { customerApi } from '../api/customerApi';
 import { MedicineSearchBar } from '../components/MedicineSearchBar';
 import { AvailabilityCard } from '../components/AvailabilityCard';
-import { ReservationDialog } from '../components/ReservationDialog';
-import { MedicineAvailabilityDto } from '@/types/availability';
 import { SkeletonCard } from '@/components/feedback/SkeletonCard';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -25,11 +23,6 @@ export function SearchPage() {
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-
-  // Active reservation dialog state
-  const [selectedItem, setSelectedItem] = useState<MedicineAvailabilityDto | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   // Debounce search input by 350ms
   useEffect(() => {
@@ -89,21 +82,6 @@ export function SearchPage() {
       }),
   });
 
-  const handleOpenReserve = (item: MedicineAvailabilityDto) => {
-    setSelectedItem(item);
-    setIsDialogOpen(true);
-  };
-
-  const handleReservationSuccess = () => {
-    setSuccessNotice(
-      language === 'ar'
-        ? 'تم تأكيد حجز الدواء بنجاح! طلبك محجوز في الصيدلية لمدة 60 دقيقة (ساعة واحدة).'
-        : 'Hold placed successfully! Your order is reserved for 60 minutes (1 hour).'
-    );
-    refetch();
-    setTimeout(() => setSuccessNotice(null), 6000);
-  };
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Banner / Hero */}
@@ -115,14 +93,6 @@ export function SearchPage() {
           {t('customer.heroSubtitle')}
         </p>
       </div>
-
-      {/* Success Notification */}
-      {successNotice && (
-        <Alert variant="success" className="mb-6">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertDescription className="font-semibold">{successNotice}</AlertDescription>
-        </Alert>
-      )}
 
       {locationError && (
         <Alert variant="warning" className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5">
@@ -242,21 +212,12 @@ export function SearchPage() {
                 <AvailabilityCard
                   key={`${item.inventoryId}-${item.branchId}`}
                   item={item}
-                  onReserve={handleOpenReserve}
                 />
               ))}
             </div>
           </div>
         )}
       </div>
-
-      {/* Reservation Hold Modal */}
-      <ReservationDialog
-        item={selectedItem}
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSuccess={handleReservationSuccess}
-      />
     </div>
   );
 }

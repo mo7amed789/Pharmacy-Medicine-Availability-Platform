@@ -76,5 +76,8 @@ public class PharmacyBranchConfiguration : IEntityTypeConfiguration<PharmacyBran
 
         builder.HasIndex(b => b.City)
             .HasDatabaseName("IX_PharmacyBranches_City");
+
+        builder.HasIndex(b => new { b.IsActive, b.City, b.PharmacyId, b.Name })
+            .HasDatabaseName("IX_PharmacyBranches_Active_City_Pharmacy_Name");
     }
 }

@@ -19,6 +19,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [AllowAnonymous]
     [EnableRateLimiting("AuthRateLimit")]
     public async Task<ActionResult<AuthResponse>> Register(
         [FromBody] RegisterRequest request,
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     [EnableRateLimiting("AuthRateLimit")]
     public async Task<ActionResult<AuthResponse>> Login(
         [FromBody] LoginRequest request,
@@ -39,6 +41,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [AllowAnonymous]
     [EnableRateLimiting("AuthRateLimit")]
     public async Task<ActionResult<AuthResponse>> Refresh(
         [FromBody] RefreshTokenRequest request,
@@ -49,6 +52,8 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("revoke")]
+    [AllowAnonymous]
+    [EnableRateLimiting("AuthRateLimit")]
     public async Task<IActionResult> Revoke(
         [FromBody] RevokeTokenRequest request,
         CancellationToken ct)

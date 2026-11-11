@@ -182,7 +182,7 @@ public class HttpPipelineTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task ProblemDetails_UnhandledError_InProduction_HidesInternalSecrets()
+    public async Task TestEndpoints_AreNotReachableInProduction()
     {
         // Arrange: Create a client running with Production environment and secure production key
         var prodFactory = _factory.WithWebHostBuilder(builder =>
@@ -196,25 +196,7 @@ public class HttpPipelineTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.GetAsync("/api/test/unhandled-error");
 
         // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-
-        var content = await response.Content.ReadAsStringAsync();
-
-        // Must NOT leak simulated credentials, SQL connection strings, or stack trace
-        Assert.DoesNotContain("secret123", content);
-        Assert.DoesNotContain("password", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("10.0.0.1", content);
-        Assert.DoesNotContain("at PharmacyAvailability", content);
-
-        using var doc = JsonDocument.Parse(content);
-        var root = doc.RootElement;
-        Assert.Equal(500, root.GetProperty("status").GetInt32());
-        Assert.Equal("Internal Server Error", root.GetProperty("title").GetString());
-        Assert.Equal("An unexpected error occurred. Please contact support with the provided Correlation ID.",
-            root.GetProperty("detail").GetString());
-        Assert.True(root.TryGetProperty("correlationId", out var corrId));
-        Assert.False(string.IsNullOrWhiteSpace(corrId.GetString()));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

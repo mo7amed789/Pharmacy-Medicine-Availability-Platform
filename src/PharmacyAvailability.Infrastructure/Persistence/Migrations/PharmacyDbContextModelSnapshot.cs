@@ -316,6 +316,7 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TokenHash")
+                        .IsUnique()
                         .HasDatabaseName("IX_RefreshTokens_TokenHash");
 
                     b.HasIndex("UserId")
@@ -427,7 +428,7 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "Type", "IsUsed")
+                    b.HasIndex("UserId", "Type", "IsUsed", "CreatedAt")
                         .HasDatabaseName("IX_VerificationCodes_UserId_Type_IsUsed");
 
                     b.ToTable("VerificationCodes", (string)null);
@@ -752,6 +753,9 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Pharmacies_LicenseNumber");
 
+                    b.HasIndex("Status", "City", "Name")
+                        .HasDatabaseName("IX_Pharmacies_Status_City_Name");
+
                     b.HasIndex("Status", "Latitude", "Longitude")
                         .HasDatabaseName("IX_Pharmacies_Status_Coordinates");
 
@@ -829,6 +833,9 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("IsActive", "Latitude", "Longitude")
                         .HasDatabaseName("IX_PharmacyBranches_IsActive_Coordinates");
+
+                    b.HasIndex("IsActive", "City", "PharmacyId", "Name")
+                        .HasDatabaseName("IX_PharmacyBranches_Active_City_Pharmacy_Name");
 
                     b.ToTable("PharmacyBranches", null, t =>
                         {

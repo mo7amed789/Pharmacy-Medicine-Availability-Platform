@@ -20,6 +20,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .HasMaxLength(256);
 
         builder.HasIndex(rt => rt.TokenHash)
+            .IsUnique()
             .HasDatabaseName("IX_RefreshTokens_TokenHash");
 
         builder.HasIndex(rt => rt.UserId)

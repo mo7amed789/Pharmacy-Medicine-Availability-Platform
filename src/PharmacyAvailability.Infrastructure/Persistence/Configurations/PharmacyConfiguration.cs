@@ -72,6 +72,10 @@ public class PharmacyConfiguration : IEntityTypeConfiguration<Pharmacy>
         builder.HasIndex(p => new { p.Status, p.Latitude, p.Longitude })
             .HasDatabaseName("IX_Pharmacies_Status_Coordinates");
 
+        // Supports the public active-pharmacy list without scanning every tenant.
+        builder.HasIndex(p => new { p.Status, p.City, p.Name })
+            .HasDatabaseName("IX_Pharmacies_Status_City_Name");
+
         // Child branches navigation
         builder.HasMany(p => p.Branches)
             .WithOne(b => b.Pharmacy)

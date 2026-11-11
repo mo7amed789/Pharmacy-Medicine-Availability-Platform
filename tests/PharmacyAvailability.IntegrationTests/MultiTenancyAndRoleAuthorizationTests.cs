@@ -19,8 +19,12 @@ public class MultiTenancyAndRoleAuthorizationTests : IClassFixture<WebApplicatio
 
     public MultiTenancyAndRoleAuthorizationTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("FeatureFlags:EnableManagementApis", "true");
+            builder.UseSetting("FeatureFlags:EnableReservations", "true");
+        });
+        _client = _factory.CreateClient();
     }
 
     private async Task<(Pharmacy PharmacyA, Pharmacy PharmacyB)> CreatePharmaciesAsync()

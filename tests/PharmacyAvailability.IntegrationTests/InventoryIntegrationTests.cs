@@ -20,8 +20,12 @@ public class InventoryIntegrationTests : IClassFixture<WebApplicationFactory<Pro
 
     public InventoryIntegrationTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("FeatureFlags:EnableManagementApis", "true");
+            builder.UseSetting("FeatureFlags:EnableReservations", "true");
+        });
+        _client = _factory.CreateClient();
     }
 
     private string CreateToken(UserRole role, Guid? pharmacyId = null)

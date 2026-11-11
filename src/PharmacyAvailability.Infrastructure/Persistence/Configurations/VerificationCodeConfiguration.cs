@@ -39,7 +39,7 @@ public class VerificationCodeConfiguration : IEntityTypeConfiguration<Verificati
             .HasColumnType("datetime2")
             .IsRequired();
 
-        builder.HasIndex(vc => new { vc.UserId, vc.Type, vc.IsUsed })
+        builder.HasIndex(vc => new { vc.UserId, vc.Type, vc.IsUsed, vc.CreatedAt })
             .HasDatabaseName("IX_VerificationCodes_UserId_Type_IsUsed");
     }
 }

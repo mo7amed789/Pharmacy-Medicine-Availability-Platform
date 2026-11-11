@@ -25,8 +25,11 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
 
     public ReservationIntegrationTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
-        _client = factory.CreateClient();
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("FeatureFlags:EnableReservations", "true");
+        });
+        _client = _factory.CreateClient();
     }
 
     private (string Token, User User) CreateTokenAndUser(UserRole role, Guid? pharmacyId = null)
@@ -36,6 +39,8 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
         var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
 
         var user = new User($"user_{Guid.NewGuid():N}@test.com", "hash", "Test User", role, "+2010", pharmacyId);
+        if (role == UserRole.Customer)
+            user.SetVerificationStatus(emailVerified: true, phoneVerified: true);
         db.Users.Add(user);
         db.SaveChanges();
 
@@ -100,6 +105,31 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
         await db.SaveChangesAsync();
 
         return (pharm, branch, med, inv);
+    }
+
+    [Fact]
+    public async Task CreateReservation_UnverifiedCustomer_Returns401Unauthorized()
+    {
+        var (_, branch, medicine, _) = await SeedInventoryAsync();
+        var (token, customerUser) = CreateTokenAndUser(UserRole.Customer);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PharmacyDbContext>();
+            var customer = await db.Users.FindAsync(customerUser.Id);
+            customer!.SetVerificationStatus(emailVerified: false, phoneVerified: false);
+            await db.SaveChangesAsync();
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/reservations")
+        {
+            Content = JsonContent.Create(new CreateReservationRequest(branch.Id, medicine.Id, 1))
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

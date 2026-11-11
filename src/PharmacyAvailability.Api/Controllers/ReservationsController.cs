@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using PharmacyAvailability.Api.Filters;
 using PharmacyAvailability.Application.Reservations;
 using PharmacyAvailability.Contracts.Catalog;
 using PharmacyAvailability.Contracts.Reservations;
@@ -11,6 +13,7 @@ namespace PharmacyAvailability.Api.Controllers;
 [ApiController]
 [Route("api/v1/reservations")]
 [Authorize]
+[FeatureGate("EnableReservations")]
 public class ReservationsController : ControllerBase
 {
     private readonly IReservationService _reservationService;
@@ -46,6 +49,7 @@ public class ReservationsController : ControllerBase
     /// Place a temporary reservation hold for a medicine at a branch.
     /// </summary>
     [HttpPost]
+    [EnableRateLimiting("PublicWriteRateLimit")]
     public async Task<ActionResult<ReservationDto>> CreateReservation(
         [FromBody] CreateReservationRequest request,
         CancellationToken ct)

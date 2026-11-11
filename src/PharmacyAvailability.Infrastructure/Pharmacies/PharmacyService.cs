@@ -99,8 +99,8 @@ public class PharmacyService : IPharmacyService
 
         if (!string.IsNullOrWhiteSpace(city))
         {
-            var normCity = city.Trim().ToLowerInvariant();
-            query = query.Where(p => p.City.ToLower() == normCity);
+            var normalizedCity = city.Trim();
+            query = query.Where(p => p.City == normalizedCity);
         }
 
         var pharmacies = await query
@@ -148,8 +148,8 @@ public class PharmacyService : IPharmacyService
 
         if (!string.IsNullOrWhiteSpace(city))
         {
-            var normCity = city.Trim().ToLowerInvariant();
-            query = query.Where(b => b.City.ToLower() == normCity);
+            var normalizedCity = city.Trim();
+            query = query.Where(b => b.City == normalizedCity);
         }
 
         var branches = await query

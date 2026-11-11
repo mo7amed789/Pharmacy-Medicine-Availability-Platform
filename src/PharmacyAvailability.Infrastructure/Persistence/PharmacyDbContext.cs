@@ -14,9 +14,19 @@ public class PharmacyDbContext : DbContext
 {
     public PharmacyDbContext(DbContextOptions<PharmacyDbContext> options) : base(options)
     {
-        ChangeTracker.Tracked += (sender, e) =>
+        // Domain aggregates create append-only child records with client-generated IDs.
+        // EF can initially classify those detached children as Modified when it discovers
+        // them through a field-backed collection. Restrict the correction to those
+        // append-only types; converting every Modified entity to Added corrupts updates.
+        ChangeTracker.Tracked += (_, e) =>
         {
-            if (!e.FromQuery && e.Entry.State == EntityState.Modified)
+            if (!e.FromQuery && e.Entry.State == EntityState.Modified && e.Entry.Entity is
+                RefreshToken or
+                PharmacyBranch or
+                MedicineBarcode or
+                MedicineAlias or
+                InventoryTransaction or
+                PriceHistory)
             {
                 e.Entry.State = EntityState.Added;
             }
