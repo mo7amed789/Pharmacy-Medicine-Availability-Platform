@@ -52,6 +52,16 @@ availability unknown. Branch contacts remain so users can call. Synced prices ar
 labelled per pack;legacy units remain unspecified,not relabelled as packs. This
 requires deployment tests and a reviewed stale-offer policy before live use.
 
+The Inventory receiver safety workflow runs seven focused real SQL Server LocalDB
+checks on an isolated Windows runner database. It covers migration application,
+persistent replay receipts, changed payloads, reorder/old observations, concurrent
+writers, all-or-nothing rollback, branch/installation isolation and public freshness.
+The suite never reads the app connection string. A failed or unavailable workflow
+is still a merge blocker; a workflow definition is not evidence of a passing run.
+Branch writers lock their branch row before examining receipts to avoid a first
+snapshot key-range conversion deadlock. Other SQL deadlocks/lock timeouts return a
+retryable 409 and never acknowledge uncommitted work.
+
 Tests/build: dotnet test tests/PharmacyAvailability.UnitTests; npm test and npm run
 build under src/PharmacyAvailability.Web. SQL Server integration suites currently
 require Windows LocalDB and cannot be claimed passing on Linux. Before enabling,
