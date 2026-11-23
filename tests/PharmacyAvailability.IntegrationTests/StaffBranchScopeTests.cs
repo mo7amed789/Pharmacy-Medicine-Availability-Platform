@@ -62,7 +62,8 @@ public class StaffBranchScopeTests
    Assert.Equal(HttpStatusCode.Forbidden,(await client.PostAsJsonAsync(Route(b.Id,"inventory"),new {medicineId=medicine.Id,quantity=1})).StatusCode);
    Assert.Equal(HttpStatusCode.Forbidden,(await client.PatchAsJsonAsync($"/api/v1/pharmacies/{pharmacy.Id}/branches/{b.Id}/status",new {isActive=false})).StatusCode);
    Assert.Equal(HttpStatusCode.NotFound,(await client.GetAsync($"/api/v1/reservations/{rb.Id}")).StatusCode);
-   Assert.Equal(HttpStatusCode.Forbidden,(await client.PostAsync($"/api/v1/reservations/{rb.Id}/confirm",null)).StatusCode);
+   Assert.Equal(HttpStatusCode.Unauthorized,(await client.PostAsync($"/api/v1/reservations/{rb.Id}/confirm",null)).StatusCode);
+   await db.Entry(rb).ReloadAsync(); Assert.Equal(ReservationStatus.Active, rb.Status);
    var list=await client.GetFromJsonAsync<PharmacyAvailability.Contracts.Catalog.PagedResult<ReservationDto>>("/api/v1/reservations");
    Assert.Single(list!.Items);Assert.Equal(a.Id,list.Items[0].BranchId);
    Assert.Equal(HttpStatusCode.Forbidden,(await client.PutAsJsonAsync($"/api/v1/pharmacies/{pharmacy.Id}/staff/{staff.Id}/branch",new AssignStaffBranchRequest(b.Id))).StatusCode);
