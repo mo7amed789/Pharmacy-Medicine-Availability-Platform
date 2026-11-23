@@ -14,11 +14,12 @@ describe('TokenManager', () => {
     expect(localStorage.getItem('access_token')).toBeNull();
   });
 
-  it('stores refresh token in localStorage and retrieves correctly', () => {
+  it('stores refresh token in memory only and removes legacy persisted credentials', () => {
+    localStorage.setItem('refresh_token', 'legacy-token');
     tokenManager.setRefreshToken('sample-refresh-token');
 
     expect(tokenManager.getRefreshToken()).toBe('sample-refresh-token');
-    expect(localStorage.getItem('refresh_token')).toBe('sample-refresh-token');
+    expect(localStorage.getItem('refresh_token')).toBeNull();
   });
 
   it('clears both tokens on clearTokens call', () => {

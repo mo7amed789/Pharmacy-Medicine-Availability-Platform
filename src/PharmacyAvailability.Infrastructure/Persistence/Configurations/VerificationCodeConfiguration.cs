@@ -17,7 +17,7 @@ public class VerificationCodeConfiguration : IEntityTypeConfiguration<Verificati
 
         builder.Property(vc => vc.Code)
             .IsRequired()
-            .HasMaxLength(10);
+            .HasMaxLength(128);
 
         builder.Property(vc => vc.Type)
             .IsRequired()

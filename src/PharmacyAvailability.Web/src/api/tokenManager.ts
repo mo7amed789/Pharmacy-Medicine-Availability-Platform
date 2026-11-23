@@ -5,6 +5,12 @@ export interface QueuedRequest {
 
 class TokenManager {
   private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+
+  constructor() {
+    // Discard credentials left by older builds. Never migrate them back to disk.
+    try { localStorage.removeItem('refresh_token'); } catch { /* Storage may be unavailable. */ }
+  }
   private isRefreshing = false;
   private failedQueue: QueuedRequest[] = [];
 
@@ -17,23 +23,12 @@ class TokenManager {
   }
 
   public getRefreshToken(): string | null {
-    try {
-      return localStorage.getItem('refresh_token');
-    } catch {
-      return null;
-    }
+    return this.refreshToken;
   }
 
   public setRefreshToken(token: string | null): void {
-    try {
-      if (token) {
-        localStorage.setItem('refresh_token', token);
-      } else {
-        localStorage.removeItem('refresh_token');
-      }
-    } catch {
-      // Ignore localStorage errors in private mode or non-browser environments
-    }
+    this.refreshToken = token;
+    try { localStorage.removeItem('refresh_token'); } catch { /* Storage may be unavailable. */ }
   }
 
   public clearTokens(): void {
