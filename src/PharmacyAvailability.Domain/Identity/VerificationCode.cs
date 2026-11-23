@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 using PharmacyAvailability.Domain.Common;
 using PharmacyAvailability.Domain.Common.Exceptions;
 
@@ -26,7 +28,7 @@ public class VerificationCode : BaseEntity
             throw new DomainValidationException("Expiration date must be in the future.");
 
         UserId = userId;
-        Code = code.Trim();
+        Code = HashCode(code);
         Type = type;
         ExpiresAt = expiresAt;
         IsUsed = false;
@@ -47,13 +49,40 @@ public class VerificationCode : BaseEntity
 
         AttemptCount++;
 
-        if (string.Equals(Code, inputCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (MatchesCode(inputCode))
         {
             IsUsed = true;
             return true;
         }
 
         return false;
+    }
+
+    // Salted and deliberately slow: a database leak must not expose six-digit OTPs.
+    private static string HashCode(string input)
+    {
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(input.Trim().ToUpperInvariant(), salt,
+            210_000, HashAlgorithmName.SHA256, 32);
+        return $"p1:{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
+    }
+
+    private bool MatchesCode(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || input.Length > 64) return false;
+        var parts = Code.Split(':');
+        // Legacy plaintext codes fail closed. Request a fresh verification code.
+        if (parts.Length != 3 || parts[0] != "p1") return false;
+        try
+        {
+            var salt = Convert.FromBase64String(parts[1]);
+            var expected = Convert.FromBase64String(parts[2]);
+            if (salt.Length != 16 || expected.Length != 32) return false;
+            var actual = Rfc2898DeriveBytes.Pbkdf2(input.Trim().ToUpperInvariant(), salt,
+                210_000, HashAlgorithmName.SHA256, 32);
+            return CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+        catch (FormatException) { return false; }
     }
 
     public void MarkUsed()
