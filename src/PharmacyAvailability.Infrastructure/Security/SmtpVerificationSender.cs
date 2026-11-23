@@ -52,80 +52,47 @@ public class SmtpVerificationSender : IVerificationSender
                 };
 
                 await client.SendMailAsync(message, ct);
-                _logger.LogInformation("Real email verification code successfully sent to {Email}", email);
+                _logger.LogInformation("Email verification delivery accepted by provider.");
                 return;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogWarning(ex,
-                    "Failed to deliver real SMTP email to {Email}. Verify Email:Smtp settings in appsettings.json. Verification Code was: {Code}",
-                    email, code);
+                // Provider exceptions can contain recipients or message bodies.
+                _logger.LogWarning("Email verification delivery failed. Check provider configuration.");
             }
         }
         else
         {
-            _logger.LogInformation(
-                "\n=======================================================\n" +
-                "[REAL EMAIL READY] To: {Email}\n" +
-                "Verification Code: {Code}\n" +
-                "Expires in: 10 minutes\n" +
-                "[CONFIGURATION NOTICE] SMTP is not yet configured with credentials. " +
-                "Add Host, UserName, and App Password under 'Email:Smtp' in appsettings.json to send real live emails.\n" +
-                "=======================================================",
-                email, code);
+            _logger.LogWarning("Email verification delivery unavailable: provider not configured.");
         }
     }
 
     public async Task SendPhoneCodeAsync(string phoneNumber, string code, CancellationToken ct = default)
     {
-        if (_smsOptions.IsConfigured)
+        if (!_smsOptions.IsConfigured)
         {
-            try
-            {
-                var twilioUrl = $"https://api.twilio.com/2010-04-01/Accounts/{_smsOptions.AccountSid}/Messages.json";
-
-                var request = new HttpRequestMessage(HttpMethod.Post, twilioUrl);
-                var authValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_smsOptions.AccountSid}:{_smsOptions.AuthToken}"));
-                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
-
-                var messageBody = $"رمز التحقق الخاص بك في منصة فارما فايندر هو: {code}. صالح لمدة 10 دقائق.\nPharmaFinder verification code: {code}";
-
-                request.Content = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>("To", phoneNumber),
-                    new KeyValuePair<string, string>("From", _smsOptions.FromPhoneNumber),
-                    new KeyValuePair<string, string>("Body", messageBody),
-                });
-
-                var response = await HttpClient.SendAsync(request, ct);
-                if (response.IsSuccessStatusCode)
-                {
-                    _logger.LogInformation("Real SMS verification code successfully dispatched to {PhoneNumber}", phoneNumber);
-                    return;
-                }
-
-                var errorResponse = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("Twilio SMS dispatch failed with status {StatusCode}: {Response}. Code was: {Code}",
-                    response.StatusCode, errorResponse, code);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to deliver real SMS to {PhoneNumber}. Verify Sms settings in appsettings.json. Verification Code was: {Code}",
-                    phoneNumber, code);
-            }
+            _logger.LogWarning("SMS verification delivery unavailable: provider not configured.");
+            return;
         }
-        else
+        try
         {
-            _logger.LogInformation(
-                "\n=======================================================\n" +
-                "[REAL SMS READY] To: {PhoneNumber}\n" +
-                "Verification Code: {Code}\n" +
-                "Expires in: 10 minutes\n" +
-                "[CONFIGURATION NOTICE] SMS gateway is not yet configured. " +
-                "Add AccountSid and AuthToken under 'Sms:Twilio' in appsettings.json to send live SMS.\n" +
-                "=======================================================",
-                phoneNumber, code);
+            var twilioUrl = $"https://api.twilio.com/2010-04-01/Accounts/{_smsOptions.AccountSid}/Messages.json";
+            using var request = new HttpRequestMessage(HttpMethod.Post, twilioUrl);
+            var authValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_smsOptions.AccountSid}:{_smsOptions.AuthToken}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+            request.Content = new FormUrlEncodedContent(new[] {
+                new KeyValuePair<string,string>("To",phoneNumber),
+                new KeyValuePair<string,string>("From",_smsOptions.FromPhoneNumber),
+                new KeyValuePair<string,string>("Body",$"PharmaFinder verification code: {code}. Expires in10 minutes.") });
+            using var response = await HttpClient.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+                _logger.LogInformation("SMS verification delivery accepted by provider.");
+            else
+                _logger.LogWarning("SMS verification delivery failed with status {StatusCode}.",response.StatusCode);
+        }
+        catch (Exception)
+        {
+            _logger.LogWarning("SMS verification delivery failed. Check provider configuration.");
         }
     }
 
@@ -160,7 +127,7 @@ public class SmtpVerificationSender : IVerificationSender
           مرحباً بك،
         </h2>
         <p style=""font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 24px;"">
-          لقد تلقينا طلباً لتأكيد وتفعيل حسابك على منصة <strong>فارما فايندر</strong> المرتبط بالبريد الإلكتروني: <span style=""color: #0F3D64; font-weight: 600;"">{email}</span>.
+          لقد تلقينا طلباً لتأكيد وتفعيل حسابك على منصة <strong>فارما فايندر</strong> المرتبط بالبريد الإلكتروني: <span style=""color: #0F3D64; font-weight: 600;"">{WebUtility.HtmlEncode(email)}</span>.
         </p>
 
         <p style=""font-size: 13px; color: #64748b; margin-bottom: 12px; text-align: center;"">
