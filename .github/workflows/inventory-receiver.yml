@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: mo7amed789/Pharmacy-App
-          ref: '8177e956a15c7fa78cef17cd40cf593f562c9abb'
+          ref: '2176620fdcaa0920d04167988c51ecbb45b74bc0'
           path: publisher-app
       - name: Start isolated SQL Server LocalDB
         shell: pwsh
@@ -42,7 +42,7 @@ jobs:
           Jwt__Secret: 'SyntheticOnly_CrossProjectTrial_NotARealJwtSigningKey_123456789'
           PHARMACY_APP_SOURCE: '${{ github.workspace }}\publisher-app'
           PUBLISHER_TRIAL_SCRIPT: '${{ github.workspace }}\tests\cross-project\publisher_trial.py'
-        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~CrossProjectTrialTests --logger "console;verbosity=normal"
+        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter "FullyQualifiedName~CrossProjectTrialTests|FullyQualifiedName~MultiBranchCatalogTrialTests" --logger "console;verbosity=normal"
       - name: Audit runtime dependencies
         run: dotnet list src/PharmacyAvailability.Api package --vulnerable --include-transitive
       - name: Unit tests
