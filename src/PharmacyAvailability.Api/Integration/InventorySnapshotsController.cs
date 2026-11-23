@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.Data.SqlClient;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -79,6 +80,10 @@ public class InventorySnapshotsController(PharmacyDbContext db, IConfiguration c
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         try
         {
+            // Serialize writers for this branch before checking receipts and sequence.
+            // Range-locking the empty receipt set alone can deadlock simultaneous first snapshots.
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT Id FROM PharmacyBranches WITH (UPDLOCK, HOLDLOCK) WHERE Id = {grant.BranchId}", ct);
             var receipts = db.Set<InventorySnapshotReceipt>();
             var previous = await receipts.SingleOrDefaultAsync(r => r.BranchId == grant.BranchId &&
                 r.InstallationId == grant.InstallationId && r.SnapshotId == snapshot.SnapshotId, ct);
@@ -125,6 +130,8 @@ public class InventorySnapshotsController(PharmacyDbContext db, IConfiguration c
             await tx.CommitAsync(ct);
             return Ok(new { snapshot.SnapshotId, snapshot.Sequence, accepted = snapshot.Items.Length, replay = false });
         }
+        catch (SqlException ex) when (ex.Number is 1205 or 1222)
+        { return Conflict(new { error = "Concurrent update. Retry the same snapshot." }); }
         catch (DbUpdateException) { return Conflict(new { error = "Concurrent update. Retry the same snapshot." }); }
     }
 }
