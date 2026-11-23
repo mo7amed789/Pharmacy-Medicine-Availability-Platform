@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: mo7amed789/Pharmacy-App
-          ref: 8177e95
+          ref: '8177e956a15c7fa78cef17cd40cf593f562c9abb'
           path: publisher-app
       - name: Start isolated SQL Server LocalDB
         shell: pwsh
