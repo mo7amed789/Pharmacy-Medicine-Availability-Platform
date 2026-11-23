@@ -42,6 +42,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasConversion<int>();
 
+        builder.HasOne<PharmacyAvailability.Domain.Pharmacies.PharmacyBranch>()
+            .WithMany().HasForeignKey(u => u.AssignedBranchId).OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(u => u.PharmacyId)
             .IsRequired(false);
 
