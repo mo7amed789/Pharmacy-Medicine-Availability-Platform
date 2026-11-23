@@ -105,4 +105,4 @@ export function AvailabilityCard({ item }: AvailabilityCardProps) {
       </CardContent>
     </Card>
   );
-            }
+}
