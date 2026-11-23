@@ -14,6 +14,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/checkout@v4
+        with:
+          repository: mo7amed789/Pharmacy-App
+          ref: 8177e95
+          path: publisher-app
       - name: Start isolated SQL Server LocalDB
         shell: pwsh
         run: |
@@ -24,6 +32,13 @@ jobs:
         env:
           INVENTORY_TEST_SQLSERVER: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryReceiverSafety;Integrated Security=true;TrustServerCertificate=true'
         run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~ReceiverSqlServerTests --logger "console;verbosity=normal"
+      - name: Combined synthetic desktop to receiver to finder trial
+        shell: pwsh
+        env:
+          INVENTORY_TEST_SQLSERVER: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryCrossProjectTrial;Integrated Security=true;TrustServerCertificate=true'
+          PHARMACY_APP_SOURCE: '${{ github.workspace }}\publisher-app'
+          PUBLISHER_TRIAL_SCRIPT: '${{ github.workspace }}\tests\cross-project\publisher_trial.py'
+        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~CrossProjectTrialTests --logger "console;verbosity=normal"
       - name: Unit tests
         run: dotnet test tests/PharmacyAvailability.UnitTests
   web:
