@@ -173,6 +173,11 @@ export const pharmacyOpsApi = {
     return res.data;
   },
 
+  assignStaffBranch: async (pharmacyId: string, userId: string, branchId: string | null): Promise<PharmacyStaffDto> => {
+    const res = await apiClient.put<PharmacyStaffDto>(`${ENDPOINTS.PHARMACY_MANAGEMENT(pharmacyId).STAFF}/${userId}/branch`, { branchId });
+    return res.data;
+  },
+
   inviteStaff: async (
     pharmacyId: string,
     request: InviteStaffRequest
