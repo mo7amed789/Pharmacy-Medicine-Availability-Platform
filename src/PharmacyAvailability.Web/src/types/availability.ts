@@ -20,6 +20,7 @@ export interface MedicineAvailabilityDto {
   distanceKm: number | null;
   availableQuantity: number;
   stockStatus: string;
+  saleUnit?: string;
   price: number;
   currency: string;
   freshness: string;
