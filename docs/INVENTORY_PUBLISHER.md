@@ -68,3 +68,11 @@ require Windows LocalDB and cannot be claimed passing on Linux. Before enabling,
 run actual SQL Server retry/reorder/concurrent transaction,rollback,branch isolation,
 receipt persistence and migration tests. The preview/receiver is not an end-to-end
 connector until the desktop durable queue/settings PR exists.
+
+Fresh-database SQL testing found an existing AddBranchToInventory migration bug:
+its raw SQL referenced BranchId before adding it. This PR now creates the column
+first. Legacy inventory migrates automatically only when its pharmacy has exactly
+one branch. Missing/ambiguous branches cause an explicit transactional failure,
+not the old deletion of stock and history. Existing databases that already applied
+that migration are not rewritten. Back up and review legacy branch assignments
+before any migration; no live database was touched here.
