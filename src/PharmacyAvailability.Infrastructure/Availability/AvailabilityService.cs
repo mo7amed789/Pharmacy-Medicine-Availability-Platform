@@ -143,7 +143,8 @@ public class AvailabilityService : IAvailabilityService
             .Include(pi => pi.Medicine)
             .Include(pi => pi.Branch)
             .Include(pi => pi.Pharmacy)
-            .Where(pi => pi.AvailableQuantity > 0)
+            // Include synced zero-stock rows so they do not disappear as false no-data.
+            .Where(pi => pi.AvailableQuantity > 0 || pi.Source == InventorySource.IntegrationSync)
             .Where(pi => pi.Pharmacy!.Status == PharmacyStatus.Active)
             .Where(pi => pi.Branch!.IsActive == true)
             .Where(pi => pi.Medicine!.IsActive == true);
@@ -186,7 +187,8 @@ public class AvailabilityService : IAvailabilityService
                 pi.AvailableQuantity,
                 pi.Price,
                 pi.Currency,
-                pi.UpdatedAt
+                pi.UpdatedAt,
+                pi.Source
             })
             .ToListAsync(ct);
 
@@ -203,7 +205,9 @@ public class AvailabilityService : IAvailabilityService
                     continue; // Exclude candidates outside exact circle radius
             }
 
-            var stockStatus = c.AvailableQuantity >= 5 ? "InStock" : "LowStock";
+            var known = c.UpdatedAt >= now.AddMinutes(-15) && c.UpdatedAt <= now.AddMinutes(2);
+            var stockStatus = !known ? "Unknown" : c.AvailableQuantity == 0 ? "OutOfStock" :
+                c.AvailableQuantity >= 5 ? "InStock" : "LowStock";
             var freshness = CalculateFreshness(c.UpdatedAt, now).ToString();
 
             mapped.Add(new MedicineAvailabilityDto(
@@ -224,12 +228,13 @@ public class AvailabilityService : IAvailabilityService
                 c.BranchLatitude,
                 c.BranchLongitude,
                 distanceKm,
-                c.AvailableQuantity,
+                known ? c.AvailableQuantity : 0,
                 stockStatus,
                 c.Price,
                 c.Currency,
                 freshness,
-                c.UpdatedAt));
+                c.UpdatedAt,
+                c.Source == InventorySource.IntegrationSync ? "box" : "unspecified"));
         }
 
         // 8. Sorting & Ranking

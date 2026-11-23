@@ -68,8 +68,16 @@ describe('AvailabilityCard', () => {
     useLanguageStore.getState().setLanguage('en');
     renderWithProviders(<AvailabilityCard item={mockItem} />);
 
-    expect(screen.getByText('8 in stock')).toBeInTheDocument();
+    expect(screen.getByText('8 units in stock')).toBeInTheDocument();
     const callLink = screen.getByRole('link', { name: /Call Pharmacy/i });
     expect(callLink).toBeInTheDocument();
   });
+});
+
+it('renders stale positive stock as unknown, not available or out of stock', () => {
+  useLanguageStore.getState().setLanguage('en');
+  renderWithProviders(<AvailabilityCard item={{...mockItem, stockStatus: 'Unknown', freshness: 'Stale'}} />);
+  expect(screen.getByText('Availability unknown, call pharmacy')).toBeInTheDocument();
+  expect(screen.queryByText('Out of Stock')).not.toBeInTheDocument();
+  expect(screen.queryByText('8 units in stock')).not.toBeInTheDocument();
 });

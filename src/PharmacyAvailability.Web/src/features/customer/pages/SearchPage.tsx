@@ -160,15 +160,15 @@ export function SearchPage() {
           <div className="space-y-4">
             <EmptyState
               icon={SearchX}
-              title={language === 'ar' ? 'لم يتم العثور على أدوية متوفرة' : 'No Medicine Inventory Found'}
+              title={language === 'ar' ? 'التوفر غير معروف لهذا البحث' : 'Availability unknown for this search'}
               description={
                 coords
                   ? (language === 'ar'
-                      ? `لم نجد أدوية متوفرة مطابقة لـ "${searchTerm || 'جميع الأدوية'}" في نطاق ${radiusKm} كم من موقعك الحالي.`
-                      : `No active pharmacy inventory matched "${searchTerm || 'all medicines'}" within ${radiusKm}km of your current location. Cairo branches may be outside this radius.`)
+                      ? `لا توجد بيانات مخزون مؤكدة مطابقة لـ "${searchTerm || 'جميع الأدوية'}" في نطاق ${radiusKm} كم من موقعك الحالي.`
+                      : `No confirmed pharmacy inventory matched "${searchTerm || 'all medicines'}" within ${radiusKm}km of your current location. Cairo branches may be outside this radius.`)
                   : (language === 'ar'
                       ? `لم نجد نتائج مطابقة لـ "${searchTerm}". جرب اختيار أحد الأدوية المقترحة أو مسح البحث لعرض جميع الأدوية.`
-                      : `No active pharmacy inventory matched "${searchTerm}". Try choosing one of the popular test medicines or clear your search to see all available inventory.`)
+                      : `No confirmed pharmacy inventory matched "${searchTerm}". Try choosing one of the popular test medicines or clear your search to see all available inventory.`)
               }
               actionLabel={coords ? (language === 'ar' ? 'التبديل إلى موقع القاهرة (Demo)' : 'Switch to Cairo Demo GPS') : (language === 'ar' ? 'عرض جميع الأدوية' : 'Reset & Show All')}
               onAction={() => {

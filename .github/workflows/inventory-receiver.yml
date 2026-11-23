@@ -1,0 +1,44 @@
+name: Inventory receiver safety
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  sqlserver:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Start isolated SQL Server LocalDB
+        shell: pwsh
+        run: |
+          sqllocaldb create InventoryReceiverTests -s
+          if ($LASTEXITCODE -ne 0) { throw 'LocalDB setup failed' }
+      - name: Test receiver transactions against SQL Server
+        shell: pwsh
+        env:
+          INVENTORY_TEST_SQLSERVER: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryReceiverSafety;Integrated Security=true;TrustServerCertificate=true'
+        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~ReceiverSqlServerTests --logger "console;verbosity=normal"
+      - name: Unit tests
+        run: dotnet test tests/PharmacyAvailability.UnitTests
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/PharmacyAvailability.Web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/PharmacyAvailability.Web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
