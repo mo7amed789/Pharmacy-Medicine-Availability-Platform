@@ -129,6 +129,12 @@ var authRateLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthEndpoi
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("PublicWriteRateLimit", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions {
+                PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
     options.AddPolicy("AuthRateLimit", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
@@ -191,10 +197,9 @@ if (!app.Environment.IsDevelopment())
 // F. CORS
 app.UseCors("CorsPolicy");
 
-// G. Rate Limiter
-app.UseRateLimiter();
-
+// Route first so endpoint-specific rate-limit metadata is available.
 app.UseRouting();
+app.UseRateLimiter();
 
 // H. Feature Gate Middleware (Short-circuits disabled features with 503 before Auth/Execution)
 app.Use(async (context, next) =>
