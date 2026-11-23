@@ -39,6 +39,8 @@ jobs:
           PHARMACY_APP_SOURCE: '${{ github.workspace }}\publisher-app'
           PUBLISHER_TRIAL_SCRIPT: '${{ github.workspace }}\tests\cross-project\publisher_trial.py'
         run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~CrossProjectTrialTests --logger "console;verbosity=normal"
+      - name: Audit runtime dependencies
+        run: dotnet list src/PharmacyAvailability.Api package --vulnerable --include-transitive
       - name: Unit tests
         run: dotnet test tests/PharmacyAvailability.UnitTests
   web:
