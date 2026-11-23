@@ -66,6 +66,9 @@ public class MultiBranchCatalogTrialTests
      var result=await client.GetFromJsonAsync<JsonElement>($"/api/v1/availability?medicineId={medicines[0]}&latitude=30.02&longitude=31&radiusKm=5",timeout.Token);
      var items=result.GetProperty("items");Assert.Equal(3,items.GetArrayLength());Assert.Equal(branches[2].ToString(),items[0].GetProperty("branchId").GetString());Assert.Equal(0,items[0].GetProperty("distanceKm").GetDouble(),6);
      Assert.Contains(items.EnumerateArray(),x=>x.GetProperty("branchId").GetString()==branches[0].ToString()&&x.GetProperty("stockStatus").GetString()=="OutOfStock");
+     var nearby=await client.GetFromJsonAsync<JsonElement>($"/api/v1/availability?medicineId={medicines[0]}&latitude=30.02&longitude=31&radiusKm=0.5",timeout.Token);Assert.Single(nearby.GetProperty("items").EnumerateArray());
+     await using(var db=new PharmacyDbContext(options)){await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE PharmacyInventories SET UpdatedAt=DATEADD(minute,-20,SYSUTCDATETIME()) WHERE BranchId={branches[2]} AND MedicineId={medicines[0]}");}
+     var stale=await client.GetFromJsonAsync<JsonElement>($"/api/v1/availability?medicineId={medicines[0]}&latitude=30.02&longitude=31&radiusKm=0.5",timeout.Token);Assert.Equal("Unknown",stale.GetProperty("items")[0].GetProperty("stockStatus").GetString());
      Console.WriteLine("3 fake branches x500 existing-catalog products=1500 accepted rows; nearest branch2 at0km; fake branch0 explicitly out of stock.");
     }
    }
