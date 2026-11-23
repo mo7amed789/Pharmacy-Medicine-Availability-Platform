@@ -74,8 +74,8 @@ describe('Frontend Zod Validation Schemas', () => {
   describe('createReservationSchema', () => {
     it('validates positive quantity', () => {
       const result = createReservationSchema.safeParse({
-        branchId: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-        medicineId: 'b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e',
+        branchId: 'a1b2c3d4-e5f6-4a8b-9c0d-1e2f3a4b5c6d',
+        medicineId: 'b2c3d4e5-f6a7-4b9c-8d1e-2f3a4b5c6d7e',
         quantity: 5,
       });
       expect(result.success).toBe(true);
@@ -83,8 +83,8 @@ describe('Frontend Zod Validation Schemas', () => {
 
     it('rejects zero or negative quantity', () => {
       const result = createReservationSchema.safeParse({
-        branchId: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-        medicineId: 'b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e',
+        branchId: 'a1b2c3d4-e5f6-4a8b-9c0d-1e2f3a4b5c6d',
+        medicineId: 'b2c3d4e5-f6a7-4b9c-8d1e-2f3a4b5c6d7e',
         quantity: 0,
       });
       expect(result.success).toBe(false);
