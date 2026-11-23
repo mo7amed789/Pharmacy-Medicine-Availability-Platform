@@ -13,7 +13,9 @@ interface AvailabilityCardProps {
 
 export function AvailabilityCard({ item }: AvailabilityCardProps) {
   const { language } = useTranslation();
-  const isAvailable = item.availableQuantity > 0;
+  const isUnknown = item.stockStatus === 'Unknown' || ['Stale', 'Outdated'].includes(item.freshness);
+  const unitLabel = item.saleUnit === 'box' ? (language === 'ar' ? 'عبوة' : 'packs') : (language === 'ar' ? 'وحدة' : 'units');
+  const isAvailable = !isUnknown && item.availableQuantity > 0;
 
   return (
     <Card className="overflow-hidden rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-200 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700">
@@ -23,12 +25,12 @@ export function AvailabilityCard({ item }: AvailabilityCardProps) {
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{item.medicineBrandName}</h3>
-              <Badge variant={isAvailable ? 'success' : 'destructive'} className="text-xs">
-                {isAvailable
-                  ? (language === 'ar' ? `متوفر (${item.availableQuantity} وحدة)` : `${item.availableQuantity} in stock`)
+              <Badge variant={isUnknown ? 'outline' : isAvailable ? 'success' : 'destructive'} className="text-xs">
+                {isUnknown ? (language === 'ar' ? 'التوفر غير مؤكد، اتصل بالصيدلية' : 'Availability unknown, call pharmacy') : isAvailable
+                  ? (language === 'ar' ? `متوفر (${item.availableQuantity} ${unitLabel})` : `${item.availableQuantity} ${unitLabel} in stock`)
                   : (language === 'ar' ? 'غير متوفر' : 'Out of Stock')}
               </Badge>
-              {item.freshness === 'Realtime' && (
+              {!isUnknown && item.freshness === 'Realtime' && (
                 <Badge variant="outline" className="text-[10px] text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/40 flex items-center gap-1">
                   <Sparkles className="h-3 w-3" />
                   {language === 'ar' ? 'تحديث لحظي' : 'Live Freshness'}
@@ -81,7 +83,7 @@ export function AvailabilityCard({ item }: AvailabilityCardProps) {
                 {formatCurrency(item.price, item.currency)}
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {language === 'ar' ? 'لكل عبوة' : 'per unit'}
+                {item.saleUnit === 'box' ? (language === 'ar' ? 'لكل عبوة، آخر سعر معلن' : 'per pack (last reported)') : (language === 'ar' ? 'السعر المعلن، تأكد من وحدة البيع' : 'Reported price, confirm sale unit')}
               </p>
             </div>
 
@@ -103,4 +105,4 @@ export function AvailabilityCard({ item }: AvailabilityCardProps) {
       </CardContent>
     </Card>
   );
-}
+            }
