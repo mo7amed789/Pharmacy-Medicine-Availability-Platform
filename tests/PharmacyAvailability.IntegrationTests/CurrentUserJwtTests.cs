@@ -30,10 +30,10 @@ public class CurrentUserJwtTests
         {
             await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => {
                 b.UseEnvironment("Testing");
-                b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string,string?> {
-                    ["ConnectionStrings:DefaultConnection"] = connection,
-                    ["Jwt:Secret"] = secret, ["Jwt:Issuer"] = "CurrentUserTest", ["Jwt:Audience"] = "CurrentUserTest"
-                }));
+                b.UseSetting("ConnectionStrings:DefaultConnection", connection);
+                b.UseSetting("Jwt:Secret", secret);
+                b.UseSetting("Jwt:Issuer", "CurrentUserTest");
+                b.UseSetting("Jwt:Audience", "CurrentUserTest");
             });
             using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
             var service = new JwtTokenService(Options.Create(new JwtOptions { Secret=secret, Issuer="CurrentUserTest", Audience="CurrentUserTest", AccessTokenLifetimeMinutes=15 }));
