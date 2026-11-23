@@ -42,7 +42,7 @@ jobs:
           Jwt__Secret: 'SyntheticOnly_CrossProjectTrial_NotARealJwtSigningKey_123456789'
           PHARMACY_APP_SOURCE: '${{ github.workspace }}\publisher-app'
           PUBLISHER_TRIAL_SCRIPT: '${{ github.workspace }}\tests\cross-project\publisher_trial.py'
-        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter "FullyQualifiedName~CrossProjectTrialTests|FullyQualifiedName~MultiBranchCatalogTrialTests|FullyQualifiedName~SecurityRateLimitTests|FullyQualifiedName~CurrentUserJwtTests" --logger "console;verbosity=normal"
+        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter "FullyQualifiedName~CrossProjectTrialTests|FullyQualifiedName~MultiBranchCatalogTrialTests|FullyQualifiedName~SecurityRateLimitTests|FullyQualifiedName~CurrentUserJwtTests|FullyQualifiedName~StaffBranchScopeTests" --logger "console;verbosity=normal"
       - name: Audit runtime dependencies
         run: dotnet list src/PharmacyAvailability.Api package --vulnerable --include-transitive
       - name: Unit tests

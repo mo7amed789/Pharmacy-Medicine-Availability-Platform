@@ -66,6 +66,23 @@ export function StaffManagementPage() {
     enabled: !!pharmacyId,
   });
 
+  const { data: branches = [] } = useQuery({
+    queryKey: ['staff-assignment-branches', pharmacyId],
+    queryFn: () => pharmacyId ? pharmacyOpsApi.getBranches(pharmacyId) : Promise.resolve([]),
+    enabled: !!pharmacyId,
+  });
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const assignBranch = async (userId: string, branchId: string) => {
+    if (!pharmacyId || assigning) return;
+    setAssignmentError(null); setAssigning(true);
+    try {
+      await pharmacyOpsApi.assignStaffBranch(pharmacyId, userId, branchId || null);
+      await queryClient.invalidateQueries({ queryKey: ['pharmacy-staff'] });
+    } catch { setAssignmentError(t('pharmacy.branchAssignmentFailed')); }
+    finally { setAssigning(false); }
+  };
+
   const onInviteSubmit = async (values: InviteStaffFormData) => {
     if (!pharmacyId) return;
     setInviteError(null);
@@ -118,6 +135,8 @@ export function StaffManagementPage() {
         </Button>
       </div>
 
+      <p className="text-sm text-slate-600 dark:text-slate-300">{t('pharmacy.branchAssignmentHelp')}</p>
+      {assignmentError && <p role="alert" className="text-sm text-red-600">{assignmentError}</p>}
       {isLoading ? (
         <div className="py-16">
           <LoadingSpinner size="lg" text={t('common.loading')} />
@@ -139,6 +158,7 @@ export function StaffManagementPage() {
               <TableRow>
                 <TableHead>{t('pharmacy.staffMember')}</TableHead>
                 <TableHead>{t('common.role')}</TableHead>
+                <TableHead>{t('pharmacy.assignedBranch')}</TableHead>
                 <TableHead>{t('common.phone')}</TableHead>
                 <TableHead className="text-center">{t('common.status')}</TableHead>
                 <TableHead className="text-end">{t('pharmacy.staffJoined')}</TableHead>
@@ -156,6 +176,18 @@ export function StaffManagementPage() {
                     <Badge variant={member.role === 'PharmacyAdmin' ? 'default' : 'secondary'}>
                       {member.role === 'PharmacyAdmin' ? t('nav.roles.PharmacyAdmin') : t('nav.roles.PharmacyStaff')}
                     </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    {member.role === 'PharmacyStaff' ? (
+                      <select aria-label={`${t('pharmacy.assignedBranch')}: ${member.fullName}`}
+                        value={member.assignedBranchId || ''} disabled={assigning}
+                        onChange={e => void assignBranch(member.id, e.target.value)}
+                        className="w-full rounded border p-2 text-xs dark:bg-slate-800">
+                        <option value="">{t('pharmacy.noBranchAssigned')}</option>
+                        {branches.filter(b => b.isActive).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    ) : <span>{t('pharmacy.allBranchesAdmin')}</span>}
                   </TableCell>
 
                   <TableCell className="text-xs text-slate-600 dark:text-slate-300">

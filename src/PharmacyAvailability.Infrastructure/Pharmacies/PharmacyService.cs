@@ -332,7 +332,20 @@ public class PharmacyService : IPharmacyService
             user.PhoneNumber,
             user.Role.ToString(),
             user.IsActive,
-            user.CreatedAt);
+            user.CreatedAt, user.AssignedBranchId);
+    }
+
+    public async Task<PharmacyStaffDto> AssignStaffBranchAsync(Guid pharmacyId, Guid userId, Guid? branchId, CancellationToken ct = default)
+    {
+        var user = await _context.Users.SingleOrDefaultAsync(u => u.Id == userId && u.PharmacyId == pharmacyId, ct)
+            ?? throw new KeyNotFoundException("Staff account not found.");
+        if (user.Role != UserRole.PharmacyStaff)
+            throw new DomainValidationException("Only staff can have a branch assignment.");
+        if (branchId.HasValue && !await _context.PharmacyBranches.AnyAsync(b => b.Id == branchId && b.PharmacyId == pharmacyId && b.IsActive, ct))
+            throw new DomainValidationException("Select an active branch in this pharmacy.");
+        user.AssignBranch(branchId);
+        await _context.SaveChangesAsync(ct);
+        return new(user.Id, pharmacyId, user.Email, user.FullName, user.PhoneNumber, user.Role.ToString(), user.IsActive, user.CreatedAt, user.AssignedBranchId);
     }
 
     public async Task<IReadOnlyList<PharmacyStaffDto>> GetStaffAsync(Guid pharmacyId, CancellationToken ct = default)
@@ -351,7 +364,7 @@ public class PharmacyService : IPharmacyService
             u.PhoneNumber,
             u.Role.ToString(),
             u.IsActive,
-            u.CreatedAt)).ToList();
+            u.CreatedAt, u.AssignedBranchId)).ToList();
     }
 
     public async Task<IReadOnlyList<PharmacyDto>> GetAllPharmaciesAsync(PharmacyStatus? status = null, CancellationToken ct = default)

@@ -216,6 +216,11 @@ public class ReservationService : IReservationService
         if (!isPlatformAdmin && (!staffPharmacyId.HasValue || staffPharmacyId.Value != reservation.PharmacyId))
             throw new UnauthorizedAccessException("You are not authorized to confirm reservations for another pharmacy.");
 
+        var actor = await _context.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == staffUserId, ct);
+        if (!isPlatformAdmin && (actor is null || !actor.IsActive ||
+            (actor.Role == UserRole.PharmacyStaff && (!actor.AssignedBranchId.HasValue || actor.AssignedBranchId != reservation.BranchId || !reservation.Branch!.IsActive))))
+            throw new UnauthorizedAccessException("Branch assignment required.");
+
         var inventory = await _context.PharmacyInventories
             .FirstOrDefaultAsync(pi => pi.BranchId == reservation.BranchId && pi.MedicineId == reservation.MedicineId, ct);
 
@@ -394,6 +399,13 @@ public class ReservationService : IReservationService
                 Array.Empty<ReservationDto>(), page, pageSize, 0, 0, false, false);
         }
 
+        if (role == UserRole.PharmacyStaff)
+        {
+            var branch = await _context.Users.AsNoTracking().Where(u => u.Id == userId && u.IsActive)
+                .Select(u => u.AssignedBranchId).SingleOrDefaultAsync(ct);
+            q = q.Where(r => branch.HasValue && r.BranchId == branch.Value && r.Branch!.IsActive);
+        }
+
         // Status filter
         if (!string.IsNullOrWhiteSpace(query.Status) &&
             Enum.TryParse<ReservationStatus>(query.Status, true, out var status))
@@ -444,6 +456,10 @@ public class ReservationService : IReservationService
 
         if (role is UserRole.PharmacyStaff or UserRole.PharmacyAdmin &&
             (!userPharmacyId.HasValue || reservation.PharmacyId != userPharmacyId.Value))
+            return null;
+
+        if (role == UserRole.PharmacyStaff && !await _context.Users.AsNoTracking().AnyAsync(u =>
+            u.Id == userId && u.IsActive && u.AssignedBranchId.HasValue && u.AssignedBranchId == reservation.BranchId && reservation.Branch!.IsActive, ct))
             return null;
 
         return MapToDto(reservation);

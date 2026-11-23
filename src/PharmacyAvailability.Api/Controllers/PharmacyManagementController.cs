@@ -47,6 +47,7 @@ public class PharmacyManagementController : ControllerBase
         if (!await AuthorizePharmacyAccessAsync(pharmacyId))
             return Forbid();
 
+        if (User.IsInRole("PharmacyStaff")) return Forbid();
         var details = await _pharmacyService.GetPharmacyDetailsAsync(pharmacyId, activeBranchesOnly: false, ct);
         if (details == null)
             return NotFound();
@@ -79,6 +80,14 @@ public class PharmacyManagementController : ControllerBase
             return Forbid();
 
         var branches = await _pharmacyService.GetBranchesForPharmacyAsync(pharmacyId, ct);
+        if (User.IsInRole("PharmacyStaff"))
+        {
+            var db = HttpContext.RequestServices.GetRequiredService<PharmacyAvailability.Infrastructure.Persistence.PharmacyDbContext>();
+            var id = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+            var assignment = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleOrDefaultAsync(
+                db.Users.Where(u => u.Id == id).Select(u => u.AssignedBranchId), ct);
+            branches = branches.Where(b => assignment.HasValue && b.Id == assignment.Value).ToList();
+        }
         return Ok(branches);
     }
 
@@ -132,6 +141,14 @@ public class PharmacyManagementController : ControllerBase
         // Both PharmacyAdmin and PharmacyStaff can toggle branch operational status
         var branch = await _pharmacyService.UpdateBranchStatusAsync(pharmacyId, branchId, request.IsActive, ct);
         return Ok(branch);
+    }
+
+    [HttpPut("staff/{userId:guid}/branch")]
+    public async Task<ActionResult<PharmacyStaffDto>> AssignStaffBranch(Guid pharmacyId, Guid userId,
+        [FromBody] AssignStaffBranchRequest request, CancellationToken ct)
+    {
+        if (!await AuthorizePharmacyAccessAsync(pharmacyId) || !IsPharmacyAdminOrPlatformAdmin()) return Forbid();
+        return Ok(await _pharmacyService.AssignStaffBranchAsync(pharmacyId, userId, request.BranchId, ct));
     }
 
     [HttpGet("staff")]

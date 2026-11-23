@@ -21,6 +21,8 @@ public interface IPharmacyService
     Task<PharmacyStaffDto> AddStaffAsync(Guid pharmacyId, InviteStaffRequest request, CancellationToken ct = default);
     Task<IReadOnlyList<PharmacyStaffDto>> GetStaffAsync(Guid pharmacyId, CancellationToken ct = default);
 
+    Task<PharmacyStaffDto> AssignStaffBranchAsync(Guid pharmacyId, Guid userId, Guid? branchId, CancellationToken ct = default);
+
     // PlatformAdmin Oversight & Approval Workflow
     Task<IReadOnlyList<PharmacyDto>> GetAllPharmaciesAsync(PharmacyStatus? status = null, CancellationToken ct = default);
     Task<PharmacyDto> ApprovePharmacyAsync(Guid id, CancellationToken ct = default);

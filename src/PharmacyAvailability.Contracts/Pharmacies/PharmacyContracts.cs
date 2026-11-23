@@ -96,4 +96,7 @@ public record PharmacyStaffDto(
     string? PhoneNumber,
     string Role,
     bool IsActive,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? AssignedBranchId = null);
+
+public record AssignStaffBranchRequest(Guid? BranchId);
