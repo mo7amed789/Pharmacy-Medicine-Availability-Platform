@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const adjustStockSchema = z.object({
   deltaQuantity: z
-    .number({ invalid_type_error: 'Delta quantity must be a number' })
+    .number({ error: 'Delta quantity must be a number' })
     .int('Quantity change must be a whole number')
     .refine((val) => val !== 0, 'Adjustment delta cannot be zero'),
   reason: z
@@ -20,7 +20,7 @@ export type AdjustStockFormData = z.infer<typeof adjustStockSchema>;
 
 export const updatePriceSchema = z.object({
   newPrice: z
-    .number({ invalid_type_error: 'Price must be a number' })
+    .number({ error: 'Price must be a number' })
     .min(0, 'Price cannot be negative'),
 });
 
