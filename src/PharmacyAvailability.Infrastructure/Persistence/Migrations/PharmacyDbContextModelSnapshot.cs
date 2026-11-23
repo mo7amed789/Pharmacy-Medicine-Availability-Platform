@@ -331,6 +331,9 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AssignedBranchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -379,6 +382,8 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedBranchId");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -1039,6 +1044,14 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Identity.User", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedBranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventoryPublisherBinding", b =>
