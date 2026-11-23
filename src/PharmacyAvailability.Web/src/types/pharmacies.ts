@@ -98,6 +98,7 @@ export interface InviteStaffRequest {
 }
 
 export interface PharmacyStaffDto {
+  assignedBranchId?: string | null;
   id: string;
   pharmacyId: string;
   email: string;
