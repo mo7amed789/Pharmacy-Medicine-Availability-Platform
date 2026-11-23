@@ -9,6 +9,8 @@ jobs:
   sqlserver:
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      Jwt__Secret: 'SyntheticOnly_CrossProjectTrial_NotARealJwtSigningKey_123456789'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -36,6 +38,7 @@ jobs:
         shell: pwsh
         env:
           INVENTORY_TEST_SQLSERVER: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryCrossProjectTrial;Integrated Security=true;TrustServerCertificate=true'
+          Jwt__Secret: 'SyntheticOnly_CrossProjectTrial_NotARealJwtSigningKey_123456789'
           PHARMACY_APP_SOURCE: '${{ github.workspace }}\publisher-app'
           PUBLISHER_TRIAL_SCRIPT: '${{ github.workspace }}\tests\cross-project\publisher_trial.py'
         run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~CrossProjectTrialTests --logger "console;verbosity=normal"
