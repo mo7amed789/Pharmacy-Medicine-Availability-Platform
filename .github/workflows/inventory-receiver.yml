@@ -9,11 +9,21 @@ jobs:
   sqlserver:
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      Jwt__Secret: 'SyntheticOnly_CrossProjectTrial_NotARealJwtSigningKey_123456789'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/checkout@v4
+        with:
+          repository: mo7amed789/Pharmacy-App
+          ref: '8177e956a15c7fa78cef17cd40cf593f562c9abb'
+          path: publisher-app
       - name: Start isolated SQL Server LocalDB
         shell: pwsh
         run: |
@@ -24,6 +34,17 @@ jobs:
         env:
           INVENTORY_TEST_SQLSERVER: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryReceiverSafety;Integrated Security=true;TrustServerCertificate=true'
         run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~ReceiverSqlServerTests --logger "console;verbosity=normal"
+      - name: Combined synthetic desktop to receiver to finder trial
+        shell: pwsh
+        env:
+          INVENTORY_TEST_SQLSERVER: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryCrossProjectTrial;Integrated Security=true;TrustServerCertificate=true'
+          ConnectionStrings__DefaultConnection: 'Server=(localdb)\InventoryReceiverTests;Database=InventoryCrossProjectTrial;Integrated Security=true;TrustServerCertificate=true'
+          Jwt__Secret: 'SyntheticOnly_CrossProjectTrial_NotARealJwtSigningKey_123456789'
+          PHARMACY_APP_SOURCE: '${{ github.workspace }}\publisher-app'
+          PUBLISHER_TRIAL_SCRIPT: '${{ github.workspace }}\tests\cross-project\publisher_trial.py'
+        run: dotnet test tests/PharmacyAvailability.IntegrationTests --filter FullyQualifiedName~CrossProjectTrialTests --logger "console;verbosity=normal"
+      - name: Audit runtime dependencies
+        run: dotnet list src/PharmacyAvailability.Api package --vulnerable --include-transitive
       - name: Unit tests
         run: dotnet test tests/PharmacyAvailability.UnitTests
   web:
