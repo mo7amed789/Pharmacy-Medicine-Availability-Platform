@@ -19,6 +19,8 @@ public class CurrentUserJwtTests
         var connection = Environment.GetEnvironmentVariable("INVENTORY_TEST_SQLSERVER")
             ?? "Server=(localdb)\\InventoryReceiverTests;Database=InventoryReceiverSafety;Integrated Security=true;TrustServerCertificate=true";
         const string secret = "SyntheticOnly_CurrentUser_TestKey_123456789012345678901234567890";
+        var isolated = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connection) { InitialCatalog = "CurrentUserJwt_" + Guid.NewGuid().ToString("N") };
+        connection = isolated.ConnectionString;
         var options = new DbContextOptionsBuilder<PharmacyDbContext>().UseSqlServer(connection).Options;
         await using var db = new PharmacyDbContext(options);
         await db.Database.MigrateAsync();
@@ -40,6 +42,6 @@ public class CurrentUserJwtTests
             user.Deactivate(); await db.SaveChangesAsync();
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v1/auth/me")).StatusCode);
         }
-        finally { db.Users.Remove(user); await db.SaveChangesAsync(); }
+        finally { await db.Database.EnsureDeletedAsync(); }
     }
 }
