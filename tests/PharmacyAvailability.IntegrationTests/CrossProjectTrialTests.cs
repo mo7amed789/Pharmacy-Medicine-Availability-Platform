@@ -90,6 +90,7 @@ public class CrossProjectTrialTests
                 await process.StandardInput.WriteLineAsync("{\"status\":200,\"ack\":"+body+"}");await process.StandardInput.FlushAsync();
             }
             await process.WaitForExitAsync(timeout.Token);Assert.True(done,await stderr);Assert.Equal(0,process.ExitCode);Assert.Equal(3,requests);
+            Console.WriteLine("Synthetic desktop -> real HTTP pipeline -> SQL Server -> public finder: PASS. Fake boxes=2, replay stable, sold-out=0, nearest distance=0, no anonymous write.");
         }
         finally {if(!process.HasExited)process.Kill(true);client?.Dispose();if(factory!=null)await factory.DisposeAsync();Directory.Delete(temp,true);}
     }
