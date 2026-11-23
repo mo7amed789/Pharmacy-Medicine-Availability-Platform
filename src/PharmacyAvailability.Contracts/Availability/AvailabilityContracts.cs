@@ -23,7 +23,8 @@ public record MedicineAvailabilityDto(
     decimal Price,
     string Currency,
     string Freshness,
-    DateTime LastUpdatedAt);
+    DateTime LastUpdatedAt,
+    string SaleUnit = "unspecified");
 
 public record AvailabilitySearchRequest
 {
