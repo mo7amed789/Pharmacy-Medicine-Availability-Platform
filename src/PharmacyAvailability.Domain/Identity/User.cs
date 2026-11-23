@@ -11,6 +11,14 @@ public class User : BaseEntity
     public string PhoneNumber { get; private set; } = string.Empty;
     public UserRole Role { get; private set; }
     public Guid? PharmacyId { get; private set; }
+    public Guid? AssignedBranchId { get; private set; }
+
+    public void AssignBranch(Guid? branchId)
+    {
+        if (Role != UserRole.PharmacyStaff && branchId.HasValue)
+            throw new DomainValidationException("Only staff can have a branch assignment.");
+        AssignedBranchId = branchId;
+    }
     public bool IsActive { get; private set; } = true;
     public bool IsEmailVerified { get; private set; } = false;
     public bool IsPhoneVerified { get; private set; } = false;
