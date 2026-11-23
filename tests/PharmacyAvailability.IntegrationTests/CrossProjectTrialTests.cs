@@ -16,6 +16,7 @@ using Xunit;
 
 namespace PharmacyAvailability.IntegrationTests;
 
+[Collection("CrossProjectDatabase")]
 public class CrossProjectTrialTests
 {
     [Fact]
