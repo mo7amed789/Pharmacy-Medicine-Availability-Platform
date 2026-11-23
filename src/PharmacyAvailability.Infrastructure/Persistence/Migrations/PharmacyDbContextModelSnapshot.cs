@@ -434,6 +434,78 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                     b.ToTable("VerificationCodes", (string)null);
                 });
 
+            modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventoryPublisherBinding", b =>
+                {
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ExternalProductId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("IdentityFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("InstallationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MedicineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("UnitsPerPack")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Verified")
+                        .HasColumnType("bit");
+
+                    b.HasKey("BranchId", "ExternalProductId");
+
+                    b.HasIndex("MedicineId");
+
+                    b.HasIndex("BranchId", "MedicineId")
+                        .IsUnique();
+
+                    b.ToTable("InventoryPublisherBindings", (string)null);
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventorySnapshotReceipt", b =>
+                {
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("InstallationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SnapshotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ItemsAccepted")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ObservedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BranchId", "InstallationId", "SnapshotId");
+
+                    b.HasIndex("BranchId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("InventorySnapshotReceipts", (string)null);
+                });
+
             modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventorySyncLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -966,6 +1038,30 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventoryPublisherBinding", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyAvailability.Domain.Catalog.Medicine", null)
+                        .WithMany()
+                        .HasForeignKey("MedicineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Integration.InventorySnapshotReceipt", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Pharmacies.PharmacyBranch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
