@@ -7,6 +7,17 @@ namespace PharmacyAvailability.UnitTests.Domain;
 public class VerificationCodeTests
 {
     [Fact]
+    public void SameCodeUsesDifferentSalt_AndLegacyPlaintextIsRejected()
+    {
+        var one = new VerificationCode(Guid.NewGuid(), "123456", VerificationType.Email, DateTime.UtcNow.AddMinutes(10));
+        var two = new VerificationCode(Guid.NewGuid(), "123456", VerificationType.Email, DateTime.UtcNow.AddMinutes(10));
+        Assert.NotEqual(one.Code, two.Code);
+        typeof(VerificationCode).GetProperty(nameof(VerificationCode.Code))!.SetValue(one, "123456");
+        Assert.False(one.Verify("123456"));
+        Assert.True(two.Verify("123456"));
+    }
+
+    [Fact]
     public void CreateVerificationCode_ValidParameters_Succeeds()
     {
         var userId = Guid.NewGuid();
@@ -15,7 +26,8 @@ public class VerificationCodeTests
         var code = new VerificationCode(userId, "123456", VerificationType.Email, expiresAt);
 
         Assert.Equal(userId, code.UserId);
-        Assert.Equal("123456", code.Code);
+        Assert.NotEqual("123456", code.Code);
+        Assert.StartsWith("p1:", code.Code);
         Assert.Equal(VerificationType.Email, code.Type);
         Assert.Equal(expiresAt, code.ExpiresAt);
         Assert.False(code.IsUsed);
