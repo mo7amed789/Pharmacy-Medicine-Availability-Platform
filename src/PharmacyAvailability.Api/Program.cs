@@ -93,6 +93,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = false;
+    options.Events = new JwtBearerEvents { OnTokenValidated = CurrentUserTokenValidator.ValidateAsync };
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
