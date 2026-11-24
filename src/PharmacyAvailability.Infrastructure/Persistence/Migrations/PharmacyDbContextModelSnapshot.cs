@@ -280,6 +280,127 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                     b.ToTable("MedicineBarcodes", (string)null);
                 });
 
+            modelBuilder.Entity("PharmacyAvailability.Domain.Credits.CreditAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Balance")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FreeQueriesRemaining")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PublicCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CreditAccounts_PublicCode");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CreditAccounts_UserId");
+
+                    b.ToTable("CreditAccounts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CreditAccounts_Balance", "[Balance] >= 0");
+
+                            t.HasCheckConstraint("CK_CreditAccounts_Free", "[FreeQueriesRemaining] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Credits.CreditLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("BalanceAfter")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("PerformedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Points")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TransferReference")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransferReference")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CreditLedgerEntries_TransferReference")
+                        .HasFilter("[TransferReference] IS NOT NULL");
+
+                    b.HasIndex("AccountId", "CreatedAt")
+                        .HasDatabaseName("IX_CreditLedgerEntries_Account_Created");
+
+                    b.ToTable("CreditLedgerEntries", (string)null);
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Credits.QueryUsageLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PointsCharged")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResultCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("UsedFreeQuery")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_QueryUsageLogs_CreatedAt");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_QueryUsageLogs_User_Created");
+
+                    b.ToTable("QueryUsageLogs", (string)null);
+                });
+
             modelBuilder.Entity("PharmacyAvailability.Domain.Identity.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1034,6 +1155,24 @@ namespace PharmacyAvailability.Infrastructure.Persistence.Migrations
                         .WithMany("Barcodes")
                         .HasForeignKey("MedicineId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Credits.CreditAccount", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PharmacyAvailability.Domain.Credits.CreditLedgerEntry", b =>
+                {
+                    b.HasOne("PharmacyAvailability.Domain.Credits.CreditAccount", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
