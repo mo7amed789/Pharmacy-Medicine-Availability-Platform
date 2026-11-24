@@ -108,6 +108,28 @@ public class GlobalExceptionHandlingMiddleware
                 };
                 break;
 
+            case InsufficientCreditException creditEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status402PaymentRequired,
+                    Title = "Insufficient Balance",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.5.2",
+                    Detail = creditEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
+            case QueryLimitExceededException limitEx:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Title = "Daily Limit Reached",
+                    Type = "https://tools.ietf.org/html/rfc6585#section-4",
+                    Detail = limitEx.Message,
+                    Instance = context.Request.Path
+                };
+                break;
+
             case InsufficientStockException stockEx:
                 problem = new ProblemDetails
                 {
