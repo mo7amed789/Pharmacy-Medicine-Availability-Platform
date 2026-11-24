@@ -2,6 +2,14 @@ export const ENDPOINTS = {
   // Auth
   AUTH_REGISTER: '/auth/register',
   AUTH_LOGIN: '/auth/login',
+  AUTH_REGISTER_PHONE: '/auth/register-phone',
+  AUTH_LOGIN_PHONE: '/auth/login-phone',
+
+  // Credits
+  CREDITS_ME: '/credits/me',
+  ADMIN_CREDIT_ACCOUNT: (code: string) => `/admin/credits/accounts/${encodeURIComponent(code)}`,
+  ADMIN_CREDIT_TOPUPS: '/admin/credits/topups',
+  ADMIN_CREDIT_USAGE: '/admin/credits/usage',
   AUTH_REFRESH: '/auth/refresh',
   AUTH_REVOKE: '/auth/revoke',
   AUTH_ME: '/auth/me',

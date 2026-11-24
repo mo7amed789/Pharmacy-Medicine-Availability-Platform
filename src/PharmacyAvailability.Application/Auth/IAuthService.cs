@@ -5,6 +5,8 @@ namespace PharmacyAvailability.Application.Auth;
 public interface IAuthService
 {
     Task<AuthResponse> RegisterCustomerAsync(RegisterRequest request, CancellationToken ct = default);
+    Task<AuthResponse> RegisterByPhoneAsync(PhoneRegisterRequest request, CancellationToken ct = default);
+    Task<AuthResponse> LoginByPhoneAsync(PhoneLoginRequest request, CancellationToken ct = default);
     Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default);
     Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default);
     Task RevokeTokenAsync(RevokeTokenRequest request, CancellationToken ct = default);

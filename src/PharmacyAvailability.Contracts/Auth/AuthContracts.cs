@@ -42,3 +42,12 @@ public record SendVerificationRequest(
 public record VerificationStatusResponse(
     bool IsEmailVerified,
     bool IsPhoneVerified);
+
+public record PhoneRegisterRequest(
+    string PhoneNumber,
+    string Password,
+    string? FullName);
+
+public record PhoneLoginRequest(
+    string PhoneNumber,
+    string Password);

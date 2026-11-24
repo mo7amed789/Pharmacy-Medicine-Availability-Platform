@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PharmacyAvailability.Application.Auth;
 using PharmacyAvailability.Application.Common.Interfaces;
+using PharmacyAvailability.Application.Validation;
 using PharmacyAvailability.Contracts.Auth;
 using PharmacyAvailability.Domain.Common.Exceptions;
 using PharmacyAvailability.Domain.Identity;
@@ -108,6 +109,59 @@ public class AuthService : IAuthService
             rawRefresh,
             accessExpiry,
             MapUserToDto(user));
+    }
+
+    public async Task<AuthResponse> RegisterByPhoneAsync(PhoneRegisterRequest request, CancellationToken ct = default)
+    {
+        if (!EgyptPhone.TryNormalize(request.PhoneNumber, out var phone))
+            throw new DomainValidationException("Enter a valid Egyptian mobile number, for example 01012345678.");
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
+            throw new DomainValidationException("Password must be at least 8 characters long.");
+
+        var loginName = EgyptPhone.PlaceholderEmail(phone);
+        var fullName = string.IsNullOrWhiteSpace(request.FullName) ? "User " + phone.Substring(phone.Length - 4) : request.FullName.Trim();
+
+        // Same phone, whether it was registered here or through the email flow.
+        var legacyLocal = "0" + phone.Substring(3);
+        var taken = await _context.Users.AnyAsync(u => u.Email == loginName || u.PhoneNumber == phone || u.PhoneNumber == legacyLocal, ct);
+        if (taken)
+            throw new DomainValidationException("An account with this phone number already exists.");
+
+        var dummy = new User(loginName, "temp", fullName, UserRole.Customer, phone);
+        var hashed = _passwordHasher.HashPassword(dummy, request.Password);
+        var user = new User(loginName, hashed, fullName, UserRole.Customer, phone);
+        // There is no email on a phone-first account, so only the phone needs proving.
+        user.SetVerificationStatus(true, false);
+
+        var (accessToken, accessExpiry) = _tokenService.GenerateAccessToken(user);
+        var (rawRefresh, refreshHash, refreshExpiry) = _tokenService.GenerateRefreshToken();
+        user.AddRefreshToken(refreshHash, refreshExpiry);
+        _context.Users.Add(user);
+
+        var otp = GenerateOtpCode();
+        _context.VerificationCodes.Add(new VerificationCode(user.Id, otp, VerificationType.Phone, DateTime.UtcNow.AddMinutes(10)));
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // The unique login name index caught a concurrent registration of the same phone.
+            throw new DomainValidationException("An account with this phone number already exists.");
+        }
+
+        await _verificationSender.SendPhoneCodeAsync(user.PhoneNumber, otp, ct);
+        _logger.LogInformation("New phone-first customer registered: {UserId}. Phone verification code dispatched.", user.Id);
+
+        return new AuthResponse(accessToken, rawRefresh, accessExpiry, MapUserToDto(user));
+    }
+
+    public Task<AuthResponse> LoginByPhoneAsync(PhoneLoginRequest request, CancellationToken ct = default)
+    {
+        if (!EgyptPhone.TryNormalize(request.PhoneNumber, out var phone))
+            throw new UnauthorizedAccessException("Invalid phone number or password.");
+        return LoginAsync(new LoginRequest(EgyptPhone.PlaceholderEmail(phone), request.Password), ct);
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)

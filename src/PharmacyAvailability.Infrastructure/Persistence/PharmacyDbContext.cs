@@ -50,6 +50,9 @@ public class PharmacyDbContext : DbContext
     public DbSet<InventorySyncLog> InventorySyncLogs => Set<InventorySyncLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<VerificationCode> VerificationCodes => Set<VerificationCode>();
+    public DbSet<PharmacyAvailability.Domain.Credits.CreditAccount> CreditAccounts => Set<PharmacyAvailability.Domain.Credits.CreditAccount>();
+    public DbSet<PharmacyAvailability.Domain.Credits.CreditLedgerEntry> CreditLedgerEntries => Set<PharmacyAvailability.Domain.Credits.CreditLedgerEntry>();
+    public DbSet<PharmacyAvailability.Domain.Credits.QueryUsageLog> QueryUsageLogs => Set<PharmacyAvailability.Domain.Credits.QueryUsageLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
