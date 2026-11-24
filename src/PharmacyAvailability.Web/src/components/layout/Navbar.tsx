@@ -56,6 +56,9 @@ export function Navbar() {
             <Link to="/customer/branches" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               {t('nav.pharmacies')}
             </Link>
+            <Link to="/account" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              {t('nav.account')}
+            </Link>
           </nav>
         </div>
 
