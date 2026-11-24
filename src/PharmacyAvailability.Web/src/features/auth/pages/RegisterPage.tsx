@@ -221,7 +221,7 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-transparent px-4 py-12 sm:px-6 lg:px-8">
       <div className="absolute top-4 end-4 flex items-center gap-2">
         <LanguageToggle />
         <ThemeToggle />

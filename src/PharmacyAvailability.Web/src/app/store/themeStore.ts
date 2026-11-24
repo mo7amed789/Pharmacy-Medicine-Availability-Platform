@@ -40,7 +40,7 @@ function applyThemeToDOM(resolved: 'light' | 'dark') {
 }
 
 const initialTheme: Theme = (() => {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return 'dark';
   try {
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
     if (saved === 'light' || saved === 'dark' || saved === 'system') {
@@ -49,7 +49,7 @@ const initialTheme: Theme = (() => {
   } catch {
     // Fallback to system on storage access error
   }
-  return 'system';
+  return 'dark';
 })();
 
 const initialResolved = resolveTheme(initialTheme);

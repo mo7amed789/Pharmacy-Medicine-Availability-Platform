@@ -78,11 +78,11 @@ export function PharmacyLayout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-transparent">
       <Navbar />
 
       {/* Pharmacy Operations Top Header */}
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+      <div className="border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/50 dark:backdrop-blur-md shadow-xs">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400">
@@ -116,7 +116,7 @@ export function PharmacyLayout() {
                     const selected = branches.find((b) => b.id === e.target.value);
                     if (selected) setCurrentBranch(selected);
                   }}
-                  className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+                  className="h-9 rounded-full border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-800/70 px-3 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>

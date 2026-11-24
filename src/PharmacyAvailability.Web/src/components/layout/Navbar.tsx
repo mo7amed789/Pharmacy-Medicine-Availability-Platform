@@ -28,7 +28,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/60 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex items-center gap-6">
@@ -38,7 +38,7 @@ export function Navbar() {
               alt="PharmaFinder"
               className="h-10 w-10 object-contain rounded-lg transition-transform group-hover:scale-105 shadow-xs"
             />
-            <div className="flex flex-col">
+            <div className="hidden sm:flex flex-col">
               <span className="text-lg tracking-tight font-black text-blue-950 dark:text-blue-400 font-heading leading-tight">
                 {t('nav.brand')}
               </span>
@@ -49,7 +49,7 @@ export function Navbar() {
           </Link>
 
           {/* Navigation Links */}
-          <nav className="flex items-center gap-5 text-sm font-medium text-slate-600 dark:text-slate-300">
+          <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-600 dark:text-slate-300">
             <Link to="/customer/search" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               {t('nav.findMedicine')}
             </Link>
