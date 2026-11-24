@@ -15,11 +15,11 @@ export function AdminLayout() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-transparent">
       <Navbar />
 
       {/* Admin Header */}
-      <div className="border-b border-purple-200 dark:border-purple-900/60 bg-purple-950 text-white">
+      <div className="border-b border-purple-200 dark:border-white/10 bg-purple-950 dark:bg-slate-900/50 dark:backdrop-blur-md text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-800 text-purple-200">
@@ -43,7 +43,7 @@ export function AdminLayout() {
       </div>
 
       {/* Admin Subnav */}
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="border-b border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 dark:backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8">
           {navItems.map((item) => {
             const Icon = item.icon;
