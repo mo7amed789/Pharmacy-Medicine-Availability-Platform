@@ -62,6 +62,8 @@ builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IAvailabilityService, AvailabilityService>();
+builder.Services.Configure<PharmacyAvailability.Application.Credits.CreditOptions>(builder.Configuration.GetSection(PharmacyAvailability.Application.Credits.CreditOptions.SectionName));
+builder.Services.AddScoped<PharmacyAvailability.Application.Credits.ICreditService, PharmacyAvailability.Infrastructure.Credits.CreditService>();
 builder.Services.AddScoped<IPharmacyOperationsService, PharmacyOperationsService>();
 builder.Services.Configure<ReservationOptions>(builder.Configuration.GetSection(ReservationOptions.SectionName));
 builder.Services.AddScoped<IReservationService, ReservationService>();
