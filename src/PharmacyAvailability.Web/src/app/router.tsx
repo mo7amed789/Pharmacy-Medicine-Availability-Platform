@@ -7,6 +7,11 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { VerificationPage } from '@/features/auth/pages/VerificationPage';
 import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
 
+// Account / credit pages
+import { AccountJoinPage } from '@/features/credits/pages/AccountJoinPage';
+import { AccountPage } from '@/features/credits/pages/AccountPage';
+import { AdminCreditsPage } from '@/features/credits/pages/AdminCreditsPage';
+
 // Customer Pages
 import { SearchPage } from '@/features/customer/pages/SearchPage';
 import { MedicineDetailPage } from '@/features/customer/pages/MedicineDetailPage';
@@ -31,6 +36,17 @@ export const router = createBrowserRouter([
             <VerificationPage />
           </ProtectedRoute>
         ),
+      },
+
+      // Accounts and manual top-up. The operator panel lives at /admin/credits;
+      // the rest of /admin/* stays redirected below.
+      {
+        element: <CustomerLayout />,
+        children: [
+          { path: 'account', element: <AccountPage /> },
+          { path: 'account/join', element: <AccountJoinPage /> },
+          { path: 'admin/credits', element: <AdminCreditsPage /> },
+        ],
       },
 
       // 1. Customer Routes (/customer/*)
