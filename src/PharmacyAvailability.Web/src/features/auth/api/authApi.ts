@@ -19,6 +19,16 @@ export const authApi = {
     return res.data;
   },
 
+  registerPhone: async (request: { phoneNumber: string; password: string; fullName?: string }): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>(ENDPOINTS.AUTH_REGISTER_PHONE, request);
+    return res.data;
+  },
+
+  loginPhone: async (request: { phoneNumber: string; password: string }): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN_PHONE, request);
+    return res.data;
+  },
+
   register: async (request: RegisterRequest): Promise<AuthResponse> => {
     const res = await apiClient.post<AuthResponse>(ENDPOINTS.AUTH_REGISTER, request);
     return res.data;
