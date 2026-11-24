@@ -29,6 +29,29 @@ public class AuthController : ControllerBase
         return CreatedAtAction(nameof(GetMe), response);
     }
 
+    /// <summary>Phone-first signup: Egyptian mobile number + password. The phone is proven with an SMS code.</summary>
+    [HttpPost("register-phone")]
+    [AllowAnonymous]
+    [EnableRateLimiting("AuthRateLimit")]
+    public async Task<ActionResult<AuthResponse>> RegisterPhone(
+        [FromBody] PhoneRegisterRequest request,
+        CancellationToken ct)
+    {
+        var response = await _authService.RegisterByPhoneAsync(request, ct);
+        return CreatedAtAction(nameof(GetMe), response);
+    }
+
+    [HttpPost("login-phone")]
+    [AllowAnonymous]
+    [EnableRateLimiting("AuthRateLimit")]
+    public async Task<ActionResult<AuthResponse>> LoginPhone(
+        [FromBody] PhoneLoginRequest request,
+        CancellationToken ct)
+    {
+        var response = await _authService.LoginByPhoneAsync(request, ct);
+        return Ok(response);
+    }
+
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("AuthRateLimit")]
