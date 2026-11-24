@@ -14,7 +14,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : 'button';
 
     const variantStyles = {
-      default: 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm',
+      default: 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-white dark:shadow-[0_0_24px_rgba(196,181,253,0.25)]',
       destructive: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
       outline: 'border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100',
       secondary: 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700',
@@ -24,15 +24,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const sizeStyles = {
       default: 'h-10 px-4 py-2 text-sm',
-      sm: 'h-8 rounded-md px-3 text-xs',
-      lg: 'h-12 rounded-md px-8 text-base font-medium',
+      sm: 'h-8 rounded-full px-3 text-xs',
+      lg: 'h-12 rounded-full px-8 text-base font-medium',
       icon: 'h-9 w-9 p-0',
     }[size];
 
     return (
       <Comp
         className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+          'inline-flex items-center justify-center whitespace-nowrap rounded-full font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
           variantStyles,
           sizeStyles,
           className
