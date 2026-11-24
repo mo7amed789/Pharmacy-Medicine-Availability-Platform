@@ -49,6 +49,33 @@
   }
 }
 
+/* Dark "plum glass" palette. Tailwind slate and blue utilities used across the
+   app resolve to these variables, so every existing dark: class picks them up. */
+.dark {
+  --color-slate-950: #0f0a14;
+  --color-slate-900: #1a1222;
+  --color-slate-800: #2a1f35;
+  --color-slate-700: #3d2f4a;
+  --color-slate-600: #5b4a6b;
+  --color-slate-500: #9486a0;
+  --color-slate-400: #b3a7be;
+  --color-slate-300: #d4cbdc;
+  --color-slate-200: #e8e2ed;
+  --color-slate-100: #f3eff6;
+  --color-slate-50: #faf8fb;
+  --color-blue-950: #2e1065;
+  --color-blue-900: #4c1d95;
+  --color-blue-800: #5b21b6;
+  --color-blue-700: #6d28d9;
+  --color-blue-600: #7c3aed;
+  --color-blue-500: #a78bfa;
+  --color-blue-400: #c4b5fd;
+  --color-blue-300: #ddd6fe;
+  --color-blue-200: #ede9fe;
+  --color-blue-100: #f5f3ff;
+  --color-blue-50: #faf5ff;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -67,8 +94,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dark body {
-  background-color: #0b1120;
-  color: #f1f5f9;
+  background-color: #0f0a14;
+  background-image:
+    radial-gradient(60rem 36rem at 85% -10%, rgba(168, 85, 140, 0.35), transparent 60%),
+    radial-gradient(48rem 30rem at 0% 0%, rgba(124, 58, 237, 0.22), transparent 60%);
+  background-attachment: fixed;
+  color: #f3eff6;
+}
+
+/* Frosted glass surfaces and pill controls (Vaulta-inspired visual language) */
+.dark .glass-card,
+.dark [data-slot='card'] {
+  background-color: rgba(42, 31, 53, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 #root {
